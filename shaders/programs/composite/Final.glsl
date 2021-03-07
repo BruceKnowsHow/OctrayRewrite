@@ -18,14 +18,8 @@ layout (r32ui) uniform uimage2D colorimg3;
 const int colortex3Format = R32UI;
 const bool colortex3Clear = true;
 const vec4 colortex3ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
-
-layout (rgba8) uniform uimage2D colorimg4;
-const int colortex4Format = RGBA8;
-const bool colortex4Clear = true;
-const vec4 colortex4ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 */
 
-uniform sampler2D colortex4;
 uniform sampler2D colortex9;
 uniform sampler2D colortex8;
 uniform mat4 gbufferModelViewInverse;

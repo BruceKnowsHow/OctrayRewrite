@@ -8,12 +8,7 @@ uniform vec2 viewSize;
 uniform float frameTimeCounter;
 uniform float far;
 
-int X = 8;
-int Y = 8;
-ivec2 Z = ivec2(X, Y);
-
 vec2 texcoord = gl_FragCoord.xy / viewSize;
-// vec2 texcoord = vec2(((ivec2(gl_FragCoord.xy) % Z) * Z + (ivec2(gl_FragCoord.xy) % (Z*Z)) / Z + (ivec2(gl_FragCoord.xy) / Z) * Z)) / viewSize;
 
 vec3 GetWorldSpacePosition(vec2 coord, float depth) {
     vec4 pos = vec4(vec3(coord, depth) * 2.0 - 1.0, 1.0);
@@ -28,7 +23,6 @@ vec3 GetWorldSpacePosition(vec2 coord, float depth) {
 #include "../../BlockMappings.glsl"
 
 layout (rgba8) uniform image2D colorimg1;
-layout (rgba8) uniform image2D colorimg4;
 
 uniform usampler2D sparse_data_tex1;
 uniform usampler2D voxel_data_tex0 ;
@@ -470,12 +464,7 @@ vec2 WangHash(uvec2 seed) {
     return vec2(seed) / 4294967296.0;
 }
 
-uniform sampler2D noisetex;
-
-const int noiseTextureResolution = 8;
-
-// uint randState = triple32(uint(texelFetch(noisetex, ivec2(texcoord*viewSize) % 8, 0).x*255) + uint(viewSize.x * viewSize.y) * frameCounter);
-uint randState = triple32(uint(floor(gl_FragCoord.x/X)*X + viewSize.x * floor(gl_FragCoord.y/Y)*Y) + uint(viewSize.x * viewSize.y) * frameCounter);
+uint randState = triple32(uint(uint(gl_FragCoord.x * gl_FragCoord.y) + uint(viewSize.x * viewSize.y) * frameCounter));
 uint RandNext() { return randState = triple32(randState); }
 uvec2 RandNext2() { return uvec2(RandNext(), RandNext()); }
 uvec3 RandNext3() { return uvec3(RandNext2(), RandNext()); }
@@ -546,11 +535,9 @@ void main() {
     
     if (bool(VMO.hit)) {
         vec3 sun_ray = normalize(vec3(0.5, 1.0, 0.3));
-        sun_ray = recover_tangent_mat(VMO.plane) * CalculateConeVector(RandNextF(), radians(90.0), 32);
+        // sun_ray = recover_tangent_mat(VMO.plane) * CalculateConeVector(RandNextF(), radians(90.0), 32);
         
         VoxelMarchOut VMO2 = VoxelMarch(VMO.vPos + VMO.plane * exp2(-11), sun_ray);
         gl_FragData[0] *= (bool(VMO2.hit) ? 0.5 : 1.0);
     }
-    
-    imageStore(colorimg4, ivec2(texcoord*viewSize), gl_FragData[0]);
 }
