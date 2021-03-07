@@ -12,8 +12,8 @@ int X = 8;
 int Y = 8;
 ivec2 Z = ivec2(X, Y);
 
-vec2 texcoord = gl_FragCoord.xy / viewSize;
-// vec2 texcoord = vec2(((ivec2(gl_FragCoord.xy) % Z) * Z + (ivec2(gl_FragCoord.xy) % (Z*Z)) / Z + (ivec2(gl_FragCoord.xy) / Z) * Z)) / viewSize;
+// vec2 texcoord = gl_FragCoord.xy / viewSize;
+vec2 texcoord = vec2(((ivec2(gl_FragCoord.xy) % Z) * Z + (ivec2(gl_FragCoord.xy) % (Z*Z)) / Z + (ivec2(gl_FragCoord.xy) / Z) * Z)) / viewSize;
 
 vec3 GetWorldSpacePosition(vec2 coord, float depth) {
     vec4 pos = vec4(vec3(coord, depth) * 2.0 - 1.0, 1.0);

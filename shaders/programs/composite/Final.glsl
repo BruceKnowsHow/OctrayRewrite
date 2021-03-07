@@ -38,5 +38,5 @@ uniform uint ZERO;
 vec2 texcoord = gl_FragCoord.xy / viewSize * MC_RENDER_QUALITY;
 
 void main() {
-    gl_FragColor = texture(colortex9, texcoord);
+    gl_FragColor = texture(colortex4, texcoord);
 }
