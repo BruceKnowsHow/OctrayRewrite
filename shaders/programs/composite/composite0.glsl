@@ -1,4 +1,5 @@
 uniform sampler2D depthtex0;
+uniform usampler2D colortex0;
 
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferProjectionInverse;
@@ -7,8 +8,11 @@ uniform vec3 cameraPosition;
 uniform vec2 viewSize;
 uniform float frameTimeCounter;
 uniform float far;
+uniform int frameCounter;
 
 vec2 texcoord = gl_FragCoord.xy / viewSize;
+
+#include "../../includes/debug.glsl"
 
 vec3 GetWorldSpacePosition(vec2 coord, float depth) {
     vec4 pos = vec4(vec3(coord, depth) * 2.0 - 1.0, 1.0);
@@ -22,12 +26,10 @@ vec3 GetWorldSpacePosition(vec2 coord, float depth) {
 #include "../../includes/Voxelization.glsl"
 #include "../../BlockMappings.glsl"
 
-layout (rgba8) uniform image2D colorimg1;
-
-uniform usampler2D sparse_data_tex1;
-uniform usampler2D voxel_data_tex0 ;
-uniform usampler2D voxel_data_tex1 ;
-uniform  sampler2D atlas_tex       ;
+uniform usampler2D voxel_data_tex0;
+uniform  sampler2D atlas_tex      ;
+uniform  sampler2D atlas_tex_n    ;
+uniform  sampler2D atlas_tex_s    ;
 
 vec2 atlas_size = textureSize(atlas_tex, 0).xy;
 
@@ -35,17 +37,15 @@ struct VoxelMarchOut {
     uint  hit  ;
     vec3  vPos ;
     vec3  plane;
-    uint  data;
     ivec2 vCoord;
-    uint  steps;
 };
 
 #define BinaryDot(a, b) ((a.x & b.x) | (a.y & b.y) | (a.z & b.z))
 #define BinaryMix(a, b, c) ((a & (~c)) | (b & c))
 
-float BinaryDotF(vec3 v, uvec3 uplane) {
-    uvec3 u = floatBitsToUint(v);
-    return uintBitsToFloat(BinaryDot(u, uplane));
+float BinaryDotF(vec3 v, ivec3 uplane) {
+    ivec3 u = floatBitsToInt(v);
+    return intBitsToFloat(BinaryDot(u, uplane));
 }
 
 float MinComp(vec3 v, out vec3 minCompMask) {
@@ -55,34 +55,34 @@ float MinComp(vec3 v, out vec3 minCompMask) {
     return minComp;
 }
 
-uvec3 GetMinCompMask(vec3 v) {
+ivec3 GetMinCompMask(vec3 v) {
     ivec3 ia = floatBitsToInt(v);
     ivec3 iCompMask;
     iCompMask.xy = ((ia.xy - ia.yx) & (ia.xy - ia.zz)) >> 31;
     iCompMask.z = (-1) ^ iCompMask.x ^ iCompMask.y;
     
-    return uvec3(iCompMask);
+    return iCompMask;
 }
 
-uvec2 GetNonMinComps(uvec3 xyz, uvec3 uplane) {
+ivec2 GetNonMinComps(ivec3 xyz, ivec3 uplane) {
     return BinaryMix(xyz.xz, xyz.yy, uplane.xz);
 }
 
-uint GetMinComp(uvec3 xyz, uvec3 uplane) {
+int GetMinComp(ivec3 xyz, ivec3 uplane) {
     return BinaryDot(xyz, uplane);
 }
 
-uvec3 SortMinComp(uvec3 xyz, uvec3 uplane) {
-    uvec3 ret;
+ivec3 SortMinComp(ivec3 xyz, ivec3 uplane) {
+    ivec3 ret;
     ret.xy = GetNonMinComps(xyz, uplane);
-    ret.z  = xyz.x ^ xyz.y ^ xyz.z ^ ret.x ^ ret.y;
+    ret.z  = (xyz.x ^ xyz.y) ^ xyz.z ^ (ret.x ^ ret.y);
     return ret;
 }
 
-uvec3 UnsortMinComp(uvec3 uvw, uvec3 uplane) {
-    uvec3 ret;
+ivec3 UnsortMinComp(ivec3 uvw, ivec3 uplane) {
+    ivec3 ret;
     ret.xz = BinaryMix(uvw.xy, uvw.zz, uplane.xz);
-    ret.y = uvw.x ^ uvw.y ^ uvw.z ^ ret.x ^ ret.z;
+    ret.y = (uvw.x ^ uvw.y) ^ uvw.z ^ (ret.x ^ ret.z);
     return ret;
 }
 
@@ -104,313 +104,210 @@ mat3 recover_tangent_mat(vec3 plane) {
     return tbn;
 }
 
-const vec3 bounds_arr[11] = vec3[11](
-    vec3(0.0, -0.5, 0.0), // Bottom Slab
-    vec3(0.0, 0.5, 0.0), // Top Slab
-    vec3(0.0, 0.0, 0.5), // Normal Stairs
-    vec3(0.0, -0.5, 0.0), // Normal Stairs
-    vec3(0.0, -1.0 / 8.0, 0.0), // Snow layer 1
-    vec3(0.0, -2.0 / 8.0, 0.0), // Snow layer 1
-    vec3(0.0, -3.0 / 8.0, 0.0), // Snow layer 1
-    vec3(0.0, -4.0 / 8.0, 0.0), // Snow layer 1
-    vec3(0.0, -5.0 / 8.0, 0.0), // Snow layer 1
-    vec3(0.0, -6.0 / 8.0, 0.0), // Snow layer 1
-    vec3(0.0, -7.0 / 8.0, 0.0) // Snow layer 1
-);
+struct AABB {
+    vec3 minBounds;
+    vec3 maxBounds;
+};
 
-// vec3[2](vec3(origin), vec3(normal), vec3(vec2(size), 0.0))
-const vec3 plane_array[10][3] = vec3[10][3](
-    vec3[3](vec3(0.5, 0.5, 0.5), vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0)), // Bottom Slab middle
-    vec3[3](vec3(0.5, 0.5, 0.5), vec3(0.0, 0.0, 1.0), vec3(1.0, 1.0, 0.0)), // Normal stair horizontal face
-    vec3[3](vec3(0.5, 0.5, 0.5), vec3(0.0, -1.0, 0.0), vec3(1.0, 1.0, 0.0)), // Top slab middle
-    vec3[3](vec3(0.5, 1.0 / 8.0, 0.5), vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0)), // Snow layer 1
-    vec3[3](vec3(0.5, 2.0 / 8.0, 0.5), vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0)), // Snow layer 2
-    vec3[3](vec3(0.5, 3.0 / 8.0, 0.5), vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0)), // Snow layer 3
-    vec3[3](vec3(0.5, 4.0 / 8.0, 0.5), vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0)), // Snow layer 4
-    vec3[3](vec3(0.5, 5.0 / 8.0, 0.5), vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0)), // Snow layer 5
-    vec3[3](vec3(0.5, 6.0 / 8.0, 0.5), vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0)), // Snow layer 6
-    vec3[3](vec3(0.5, 7.0 / 8.0, 0.5), vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0)) // Snow layer 7
-);
-
-void get_subvoxel_data(int block_id, out int plane_index, out int plane_count, out int bounds_index, out int bounds_count) {
-    plane_index = block_id - 5;
-    plane_count = 0;
+// Optimized AABB function that only does binary checks.
+// Will erroniously find intersections which happen behind pos.
+// Useful for the interior marching loop, which needs to be very fast.
+bool IntersectAABB(vec3 pos, vec3 dir, AABB aabb) {
+    vec3 minBoundsDist = (aabb.minBounds - pos) / dir;
+    vec3 maxBoundsDist = (aabb.maxBounds - pos) / dir;
     
-    if (block_id == 3) plane_index = 0, plane_count = 1, bounds_index = 0, bounds_count = 1; // Bottom Slab
-    if (block_id == 4) plane_index = 2, plane_count = 1, bounds_index = 1, bounds_count = 1; // Top Slab
-    if (block_id == 5) plane_index = 0, plane_count = 2, bounds_index = 0, bounds_count = 0; // Normal Stairs
+    vec3 minDists = min(minBoundsDist, maxBoundsDist);
+    vec3 maxDists = intBitsToFloat(floatBitsToInt(minBoundsDist) ^ floatBitsToInt(maxBoundsDist) ^ floatBitsToInt(minDists));
+    
+    ivec3 a = floatBitsToInt(minDists - maxDists.yzx);
+    ivec3 b = floatBitsToInt(minDists - maxDists.zxy);
+    a = a & b;
+    return (a.x & a.y & a.z) < 0;
 }
 
-const vec3 symmetry_vecs[8] = vec3[8](
-    vec3( 1.0,  1.0,  1.0),
-    vec3(-1.0,  1.0,  1.0),
-    vec3( 1.0, -1.0,  1.0),
-    vec3( 1.0,  1.0, -1.0),
-    vec3(-1.0, -1.0,  1.0),
-    vec3(-1.0,  1.0, -1.0),
-    vec3( 1.0, -1.0, -1.0),
-    vec3(-1.0, -1.0, -1.0)
-);
-
-const mat3 symmetry_mats[6] = mat3[6](
-    mat3( 1.0,  0.0,  0.0,  0.0,  1.0,  0.0,  0.0,  0.0,  1.0), // ( x,  y,  z) 0
-    mat3( 1.0,  0.0,  0.0,  0.0,  0.0,  1.0,  0.0,  1.0,  0.0), // ( x,  z,  y) 1
-    mat3( 0.0,  1.0,  0.0,  1.0,  0.0,  0.0,  0.0,  0.0,  1.0), // ( y,  x,  z) 2
-    mat3( 0.0,  1.0,  0.0,  0.0,  0.0,  1.0,  1.0,  0.0,  0.0), // ( y,  z,  x) 3
-    mat3( 0.0,  0.0,  1.0,  1.0,  0.0,  0.0,  0.0,  1.0,  0.0), // ( z,  x,  y) 4
-    mat3( 0.0,  0.0,  1.0,  0.0,  1.0,  0.0,  1.0,  0.0,  0.0) // ( z,  y,  x) 5
-);
-
-// (bound_start, bound_count, plane_start, plane_count)
-// Negative bound_count signals an && operation over the bound, instead of an ||
-// (int           , int           ,  (int, int),  (int, int))
-const int block_indices_size = 10;
-const ivec4 block_indices[block_indices_size] = ivec4[block_indices_size](
-    ivec4(0, 1,    0, 1), // Bottom Slab
-    ivec4(1, 1,    2, 1), // Top Slab
-    ivec4(2, 2,    0, 2), // Normal Stair
-    ivec4(4, 1,    3, 1), // Snow layer 1
-    ivec4(5, 1,    4, 1), // Snow layer 2
-    ivec4(6, 1,    5, 1), // Snow layer 3
-    ivec4(7, 1,    6, 1), // Snow layer 4
-    ivec4(8, 1,    7, 1), // Snow layer 5
-    ivec4(9, 1,    8, 1), // Snow layer 6
-    ivec4(10, 1,    9, 1) // Snow layer 7
-);
-
-uniform int frameCounter;
-bool subvoxel_intersect(int block_id, vec3 world_dir, vec3 voxel_pos) {
-    if (!is_sub_voxel(block_id)) return true;
+// More general AABB check.
+// Avoids reporting intersections behind pos.
+// Returns normal and position information for hit.
+bool IntersectAABB(inout vec3 pos, vec3 dir, AABB aabb, out vec3 plane) {
+    vec3 minBoundsDist = (aabb.minBounds - pos) / dir;
+    vec3 maxBoundsDist = (aabb.maxBounds - pos) / dir;
     
-    vec3 fract_pos = fract(voxel_pos);
+    vec3 minDists = min(minBoundsDist, maxBoundsDist);
+    vec3 maxDists = intBitsToFloat(floatBitsToInt(minBoundsDist) ^ floatBitsToInt(maxBoundsDist) ^ floatBitsToInt(minDists));
     
-    ivec2 symmetry_indices = ivec2(0, 0); // Comes from block texel data
-    vec3 symmetry_vec = symmetry_vecs[symmetry_indices.x];
-    mat3 symmetry_mat = symmetry_mats[symmetry_indices.y];
+    ivec3 a = floatBitsToInt(minDists - maxDists.yzx);
+    ivec3 b = floatBitsToInt(minDists - maxDists.zxy);
+    a = a & b;
+    if ((a.x & a.y & a.z) >= 0)
+        return false;
     
-    fract_pos = (symmetry_mat * ((fract_pos * 2.0 - 1.0) * symmetry_vec)) * 0.5 + 0.5;
-    world_dir =  symmetry_mat *  (world_dir * symmetry_vec);
+    vec3 positiveDir = step(0.0, dir);
+    vec3 dists = mix(maxBoundsDist, minBoundsDist, positiveDir);
     
-    ivec4 block_ids = block_indices[(block_id - 3) % block_indices_size];
+    MinComp(-dists, plane);
+         dists = max(vec3(0.0), dists);
     
-    int first_bound = block_ids[0];
-    int bound_count = block_ids[1];
-    int bound_end = first_bound + abs(bound_count);
+    float dist;
     
-    bool result = false;
-    for (int bound_i = first_bound; bound_i < bound_end; ++bound_i) {
-        vec3 bound = bounds_arr[bound_i];
-        vec3 compare_pos = fract_pos * sign(bound);
-        result = result || all(greaterThanEqual(compare_pos, bound));
-    }
-    if (result) return true;
-    
-    vec3  normal = vec3(0.0);
-    
-    float smallest_ray_len = 1e35;
-    
-    vec3 starting_voxel_pos = voxel_pos;
-    
-    int first_plane = block_ids[2];
-    int plane_count = block_ids[3];
-    int plane_end = first_plane + plane_count;
-    
-    for (int plane = first_plane; plane < plane_end; ++plane) {
-        vec3 plane_origin = plane_array[plane][0];
-        vec3 plane_normal = plane_array[plane][1];
-        vec2 plane_size   = plane_array[plane][2].xy;
-        vec2 plane_extent = plane_size / 2.0;
-        
-        float ray_len = dot(plane_origin - fract_pos, plane_normal) / dot(world_dir, plane_normal);
-        
-        vec3 hit_point = fract_pos + world_dir * ray_len;
-        
-        if (ray_len > 0 && ray_len < smallest_ray_len && all(lessThan(abs(hit_point - 0.5), vec3(0.5)))) {
-            mat3 plane_tangent_mat = recover_tangent_mat(plane_normal);
-            vec3 tangent_coord = ((hit_point * 2.0 - 1.0) * plane_tangent_mat);
-            
-            // gl_FragData[0].rgb = abs(fract_pos);
-            
-            tangent_coord = tangent_coord * 0.5 + 0.5;
-            
-            vec2 plane_coord = ((hit_point - plane_origin) * plane_tangent_mat).xy * 2.0;
-            
-            if (any(greaterThan(abs(plane_coord), plane_size))) continue;
-            
-            smallest_ray_len = ray_len;
-            normal = plane_normal;
-            voxel_pos = starting_voxel_pos + world_dir * smallest_ray_len + plane_tangent_mat[2] * exp2(-12);
+    if (dists.x > dists.y) {
+        if (dists.x > dists.z) {
+            dist = dists.x;
+        } else {
+            dist = dists.z;
         }
+    } else if (dists.y > dists.z) {
+        dist = dists.y;
+    } else {
+        dist = dists.z;
     }
     
-    return smallest_ray_len != 1e35;
+    
+    pos = pos + dir * dist;
+    
+    return dist > 0.0;
 }
 
-void subvoxel_intersect(int block_id, vec3 world_dir, vec2 corner_texcoord, vec2 sprite_scale,
-    inout vec3 voxel_pos, inout mat3 tangent_mat, inout vec2 tCoord, inout bool hit)
-{
-    if (!is_sub_voxel(block_id)) return;
+int pack_AABB(vec3 minBounds, vec3 maxBounds) {
+    int ret = 0;
+    ivec3 b0 = ivec3(minBounds * 16.0);
+    ivec3 b1 = ivec3(maxBounds * 16.0);
     
-    vec3  fract_pos = fract(voxel_pos);
+    b0.yz = b0.yz << ivec2(5, 10);
+    b1.yz = b1.yz << ivec2(5, 10);
     
-    ivec2 symmetry_indices = ivec2(0, 0); // Comes from block texel data
-    vec3 symmetry_vec = symmetry_vecs[symmetry_indices.x];
-    mat3 symmetry_mat = symmetry_mats[symmetry_indices.y];
+    b1 = b1 << 15;
     
-    fract_pos = (symmetry_mat * ((fract_pos * 2.0 - 1.0) * symmetry_vec)) * 0.5 + 0.5;
-    world_dir =  symmetry_mat *  (world_dir * symmetry_vec);
+    b0 |= b1;
     
+    return b0.x | b0.y | b0.z;
+}
+
+AABB unpack_AABB(int data) {
+    ivec3 b0 = (data >> ivec3(0, 5, 10)) & ((1 << 5) - 1);
+    ivec3 b1 = (data >> ivec3(15, 20, 25)) & ((1 << 5) - 1);
     
-    ivec4 block_ids = block_indices[(block_id - 3) % block_indices_size];
-    
-    int first_bound = block_ids[0];
-    int bound_count = block_ids[1];
-    int bound_end = first_bound + abs(bound_count);
-    
-    bool result = false;
-    for (int bound_i = first_bound; bound_i < bound_end; ++bound_i) {
-        vec3 bound = bounds_arr[bound_i];
-        vec3 compare_pos = fract_pos * sign(bound);
-        result = result || all(greaterThanEqual(compare_pos, bound));
-    }
-    if (result) return;
-    
-    
-    vec3  normal    = vec3(0.0);
-    
-    float smallest_ray_len = 1e35;
-    
-    vec3 starting_voxel_pos = voxel_pos;
-    
-    int first_plane = block_ids[2];
-    int plane_count = block_ids[3];
-    int plane_end = first_plane + plane_count;
-    
-    for (int plane = first_plane; plane < plane_end; ++plane) {
-        vec3 plane_origin = plane_array[plane][0];
-        vec3 plane_normal = plane_array[plane][1];
-        vec2 plane_size   = plane_array[plane][2].xy;
-        vec2 plane_extent = plane_size / 2.0;
-        
-        float ray_len = dot(plane_origin - fract_pos, plane_normal) / dot(world_dir, plane_normal);
-        
-        vec3 hit_point = fract_pos + world_dir * ray_len;
-        
-        if (ray_len > 0 && ray_len < smallest_ray_len && all(lessThan(abs(hit_point - 0.5), vec3(0.5)))) {
-            mat3 plane_tangent_mat = recover_tangent_mat(plane_normal);
-            vec3 tangent_coord = ((hit_point * 2.0 - 1.0) * plane_tangent_mat);
-            
-            tangent_coord = tangent_coord * 0.5 + 0.5;
-            
-            vec2 plane_coord = ((hit_point - plane_origin) * plane_tangent_mat).xy * 2.0;
-            
-            if (any(greaterThan(abs(plane_coord), plane_size))) continue;
-            
-            vec2 coord = plane_coord.xy * sprite_scale + corner_texcoord;
-            
-            // vec4 diffuse = textureLod(atlas_tex, coord, 0);
-            vec4 diffuse = vec4(1);
-            
-            if (diffuse.a > 0.1) {
-                smallest_ray_len = ray_len;
-                normal = plane_normal;
-                tangent_mat = plane_tangent_mat;
-                tCoord = tangent_coord.xy;
-                voxel_pos = starting_voxel_pos + world_dir * smallest_ray_len + tangent_mat[2] * exp2(-12);
-            }
-        }
-    }
-    
-    hit = smallest_ray_len != 1e35;
+    AABB aabb;
+    aabb.minBounds = vec3(b0) / 16.0;
+    aabb.maxBounds = vec3(b1) / 16.0;
+    return aabb;
+}
+
+const ivec4 bounds[6] = ivec4[6](
+    ivec4( pack_AABB(vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0)),
+           pack_AABB(vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0)),
+           pack_AABB(vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0)),
+           pack_AABB(vec3(0.0, 0.0, 0.0), vec3(1.0, 0.5, 1.0)) ),
+    ivec4( pack_AABB(vec3(0.0, 0.5, 0.0), vec3(1.0, 1.0, 1.0)),
+           pack_AABB(vec3(0.0, 0.0, 0.0), vec3(1.0, 0.5, 1.0)),
+           pack_AABB(vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0/8.0, 1.0)),
+           pack_AABB(vec3(0.0, 0.0, 0.0), vec3(1.0, 2.0/8.0, 1.0)) ),
+    ivec4( pack_AABB(vec3(0.0, 0.0, 0.0), vec3(1.0, 3.0/8.0, 1.0)),
+           pack_AABB(vec3(0.0, 0.0, 0.0), vec3(1.0, 4.0/8.0, 1.0)),
+           pack_AABB(vec3(0.0, 0.0, 0.0), vec3(1.0, 5.0/8.0, 1.0)),
+           pack_AABB(vec3(0.0, 0.0, 0.0), vec3(1.0, 6.0/8.0, 1.0)) ),
+    ivec4( pack_AABB(vec3(0.0, 0.0, 0.0), vec3(1.0, 7.0/8.0, 1.0)),
+           pack_AABB(vec3(1.0/16.0, 0.0, 1.0/16.0), vec3(15.0/16.0, 1.0/16.0, 15.0 / 16.0)),
+           pack_AABB(vec3(5.0/16.0, 6.0/16.0, 14.0/16.0), vec3(11.0/16.0, 10.0/16.0, 16.0 / 16.0)),
+           pack_AABB(vec3(5.0/16.0, 6.0/16.0, 0.0/16.0), vec3(11.0/16.0, 10.0/16.0, 2.0 / 16.0)) ),
+    ivec4( pack_AABB(vec3(5.0/16.0, 6.0/16.0, 0.0/16.0).zyx, vec3(11.0/16.0, 10.0/16.0, 2.0 / 16.0).zyx),
+           pack_AABB(vec3(5.0/16.0, 6.0/16.0, 14.0/16.0).zyx, vec3(11.0/16.0, 10.0/16.0, 16.0 / 16.0).zyx),
+           pack_AABB(vec3(5.0/16.0, 0.0/16.0, 6.0/16.0), vec3(11.0/16.0, 2.0/16.0, 10.0 / 16.0)),
+           pack_AABB(vec3(5.0/16.0, 0.0/16.0, 6.0/16.0).zyx, vec3(11.0/16.0, 2.0/16.0, 10.0 / 16.0).zyx) ),
+    ivec4( pack_AABB(vec3(5.0/16.0, 14.0/16.0, 6.0/16.0), vec3(11.0/16.0, 16.0/16.0, 10.0 / 16.0)),
+           pack_AABB(vec3(5.0/16.0, 14.0/16.0, 6.0/16.0).zyx, vec3(11.0/16.0, 16.0/16.0, 10.0 / 16.0).zyx),
+           0,
+           0 )
+);
+
+bool subvoxel_intersect(int block_id, vec3 world_dir, inout vec3 fract_pos, out vec3 plane) {
+    return IntersectAABB(fract_pos, world_dir, unpack_AABB(bounds[block_id/4][block_id%4]), plane);
 }
 
 VoxelMarchOut VoxelMarch(vec3 vPos, vec3 wDir) {
     // http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
     
-    uvec3 dirIsPositive = uvec3(max(sign(wDir), 0));
-    uvec3 boundary = uvec3(vPos) + dirIsPositive;
-    uvec3 uvPos = uvec3(vPos);
+    ivec3 dirIsPositive = ivec3(max(sign(wDir), 0));
+    ivec3 uvPos = ivec3(vPos);
+    ivec3 boundary = uvPos + ivec3(dirIsPositive);
     
-    uvec3 vvPos = uvPos;
+    ivec3 vvPos = uvPos;
     vec3 fPos = fract(vPos);
+    vec3 fPosMAD = fPos / wDir;
     
-    uint LOD = 0;
-    uint hit = 1;
+    int LOD = 0;
+    int hit = 1;
     uint data;
     ivec2 vCoord;
     VoxelMarchOut VMO;
-    VMO.steps = 0;
+    int steps = 0;
     
-    vCoord = get_sparse_voxel_coord(sparse_data_tex1, uvPos, LOD);
-    data = texelFetch(voxel_data_tex1, vCoord, 0).x;
+    uint chunk_addr = texelFetch(sparse_data_tex0, get_sparse_chunk_coord(uvPos) + SPARSE0, 0).r;
+    
+    // vCoord = get_sparse_voxel_coord(sparse_data_tex1, uvPos, LOD);
+    vCoord = get_sparse_voxel_coord(chunk_addr, uvPos, LOD);
+    data = texelFetch(voxel_data_tex0, vCoord + DATA0, 0).x & 255;
     vec4 voxel_data = unpackUnorm4x8(data);
-    int block_id = int((1.0 - voxel_data.z) * 255.0);
-    if (data != 0 && subvoxel_intersect(block_id, wDir, vPos)) {
+    int block_id = decode_block_id(data);
+    if (data != 0 && is_sub_voxel(block_id) && subvoxel_intersect(block_id, wDir, fPos, VMO.plane)) {
         VMO.vCoord = vCoord;
         VMO.hit = 1;
-        VMO.data = data;
         VMO.vPos = vPos;
-        VMO.plane *= 0;
         return VMO;
     }
     
     while (true) {
-        vec3 distToBoundary = (boundary - vPos) / wDir;
-        uvec3 uplane = GetMinCompMask(distToBoundary);
-        VMO.plane = vec3(-uplane);
+        vec3 distToBoundary = (boundary - vvPos) * (1.0 / wDir) - fPosMAD;
+        ivec3 uplane = GetMinCompMask(distToBoundary);
         
-        uvec3 isPos = SortMinComp(dirIsPositive, uplane);
+        ivec3 isPos = SortMinComp(dirIsPositive, uplane);
         
-        uint nearBound = GetMinComp(boundary, uplane);
+        int nearBound = GetMinComp(boundary, uplane);
         
-        uvec3 newPos;
+        ivec3 newPos;
         newPos.z = nearBound + isPos.z - 1;
         
-        if (LOD >= 8 ) {
-            vec4 voxel_data = unpackUnorm4x8(data);
-            int block_id = int((1.0 - voxel_data.z) * 255.0);
+        float tLength = BinaryDotF(distToBoundary, uplane);
+        vec3 temp = fPos + wDir * tLength;
+        vec3 floorTemp = floor(temp);
+        
+        if ( LOD < 0 || OutOfVoxelBounds(newPos.z, uplane) || ++steps > 256) { break; }
+        
+        // newPos.xy = GetNonMinComps(ivec3(temp) + (floatBitsToInt(temp) >> 31) + vvPos, uplane);
+        newPos.xy = GetNonMinComps(ivec3(floorTemp) + vvPos, uplane);
+        
+        int oldPos = GetMinComp(uvPos, uplane);
+        int shouldStepUp = int((newPos.z >> (LOD+1)) != (oldPos >> (LOD+1)));
+        LOD = LOD + shouldStepUp;
+        LOD = min(LOD, 7);
+        uvPos = UnsortMinComp(newPos, uplane);
+        // if (findMSB(newPos.z ^ oldPos) > 3)
+            chunk_addr = texelFetch(sparse_data_tex0, get_sparse_chunk_coord(uvPos) + SPARSE0, 0).r;
+        vCoord = get_sparse_voxel_coord(chunk_addr, uvPos, LOD);
+        uint data = 0;
+        if (chunk_addr != 0 || LOD > 4)
+            data = texelFetch(voxel_data_tex0, vCoord + DATA0, 0).x;
+        hit = int(data != 0);
+        LOD -= hit;
+        
+        if (is_AABB(data)) {
+            // vec3 fract_pos = fract(vec3(-uplane) * sign(wDir) * exp2(-12) + temp);
+            vec3 fract_pos = mix(temp - floorTemp, 1-vec3(dirIsPositive), vec3(-uplane));
+            int block_id = decode_block_id(data);
             
-            if (!subvoxel_intersect(block_id, wDir, vPos + VMO.plane*sign(wDir) * exp2(-8) + float(VMO.steps>0)*wDir * MinComp((boundary - vPos) / wDir, VMO.plane))) {
+            if (!IntersectAABB(fract_pos, wDir, unpack_AABB(bounds[block_id/4][block_id%4]))) {
                 LOD = 0;
                 hit = 0;
-                float tLength = BinaryDotF(distToBoundary, uplane);
-                newPos.xy = GetNonMinComps(ivec3(floor(fPos + wDir * tLength)) + vvPos, uplane);
-                uvPos = UnsortMinComp(newPos, uplane);
-                boundary.xy  = ((newPos.xy >> LOD) + isPos.xy) << LOD;
-                boundary.z   = nearBound + ((isPos.z * 2 - 1) << LOD);
-                boundary     = UnsortMinComp(boundary, uplane);
-                ++VMO.steps;
-                continue;
             }
         }
         
-        if ( LOD >= 8 || OutOfVoxelBounds(newPos.z, uplane) || ++VMO.steps >= 512 ) { break; }
-        
-        float tLength = BinaryDotF(distToBoundary, uplane);
-        newPos.xy = GetNonMinComps(ivec3(floor(fPos + wDir * tLength)) + vvPos, uplane);
-        uint oldPos = GetMinComp(uvPos, uplane);
-        uvPos = UnsortMinComp(newPos, uplane);
-        
-        // DEBUG_VM_ACCUM();
-        // DEBUG_VM_ACCUM_LOD(LOD);
-        
-        LOD = (1-hit)*findMSB(newPos.z ^ oldPos)+(LOD*hit);
-        LOD = min(LOD, 4);
-        vCoord = get_sparse_voxel_coord(sparse_data_tex1, uvPos, LOD);
-        data = texelFetch(voxel_data_tex1, vCoord, 0).x;
-        hit = uint(data != 0);
-        uint miss = 1-hit;
-        LOD -= hit;
-        
         boundary.xy  = ((newPos.xy >> LOD) + isPos.xy) << LOD;
-        boundary.z   = nearBound + miss * ((isPos.z * 2 - 1) << LOD);
+        boundary.z   = nearBound + ((hit-1) & ((isPos.z * 2 - 1) << LOD));
         boundary     = UnsortMinComp(boundary, uplane);
     }
     
     VMO.vCoord = vCoord;
-    VMO.hit = hit;
-    VMO.data = data;
-    VMO.vPos = vPos + wDir * MinComp((boundary - vPos) / wDir, VMO.plane);
+    VMO.hit = uint(hit);
+    VMO.vPos = vPos + wDir * MinComp((boundary - vvPos) * (1.0 / wDir) - fPosMAD, VMO.plane);
     VMO.plane *= sign(-wDir);
     
     return VMO;
@@ -494,50 +391,163 @@ struct RayStruct {
     uint info;
 };
 
-#define RAY_BUFFER_CAPACITY 8
-RayStruct ray_buffer[RAY_BUFFER_CAPACITY];
+const uint  PRIMARY_RAY_TYPE = (1 <<  8);
+const uint SUNLIGHT_RAY_TYPE = (1 <<  9);
+const uint  AMBIENT_RAY_TYPE = (1 << 10);
+const uint SPECULAR_RAY_TYPE = (1 << 11);
 
-int ray_buffer_index = 0;
+const uint RAY_DEPTH_MASK = (1 << 8) - 1;
+const uint RAY_TYPE_MASK  = ((1 << 16) - 1) & (~RAY_DEPTH_MASK);
+const uint RAY_ATTR_MASK  = ((1 << 24) - 1) & (~RAY_DEPTH_MASK) & (~RAY_TYPE_MASK);
 
-bool ray_buffer_full()  { return ray_buffer_index == RAY_BUFFER_CAPACITY; }
-bool ray_buffer_empty() { return ray_buffer_index == 0; }
+bool is_ambient_ray (RayStruct ray) { return ((ray.info & AMBIENT_RAY_TYPE)  != 0); }
+bool is_sunlight_ray(RayStruct ray) { return ((ray.info & SUNLIGHT_RAY_TYPE) != 0); }
+bool is_primary_ray (RayStruct ray) { return ((ray.info & PRIMARY_RAY_TYPE)  != 0); }
+bool is_specular_ray(RayStruct ray) { return ((ray.info & SPECULAR_RAY_TYPE) != 0); }
+
+uint get_ray_depth(RayStruct ray) { return ray.info & RAY_DEPTH_MASK; }
+
+struct PackedRayStruct {
+    vec4 EBIN;
+    vec4 DENIN;
+};
+
+PackedRayStruct pack_ray(RayStruct ray) {
+    PackedRayStruct ret;
+    
+    return ret;
+}
+
+#define RAY_STACK_CAPACITY 4
+RayStruct ray_stack[RAY_STACK_CAPACITY];
+
+int ray_stack_top = 0;
+
+bool ray_stack_full()  { return ray_stack_top == RAY_STACK_CAPACITY; }
+bool ray_stack_empty() { return ray_stack_top == 0; }
+
+bool ray_stack_overflow = false;
+
+void ray_stack_push(RayStruct elem) {
+    ray_stack_overflow = ray_stack_overflow || ray_stack_full();
+    
+    if (ray_stack_overflow)
+        return;
+    // if (!PassesVisibilityThreshold(elem.absorb)) { return;}
+    
+    ray_stack[ray_stack_top++] = elem;
+}
+
+RayStruct ray_pop() {
+    return ray_stack[--ray_stack_top];
+}
 
 /* DRAWBUFFERS:9 */
 
 void main() {
-    if (texture(depthtex0, texcoord).x >= 1.0) {gl_FragData[0] = vec4(1); return; }
+    float depth0 = texture(depthtex0, texcoord).x;
     
-	vec3 world_dir = GetWorldSpacePosition(texcoord, 1);
+    if (depth0 >= 1.0) { gl_FragData[0] = vec4(0); exit(); return; }
+    
+    vec3 color = vec3(0.0);
+    
+    vec3 world_dir = normalize(GetWorldSpacePosition(texcoord, 1));
     vec3 voxel_pos = WorldToVoxelSpace(vec3(0.0));
     
-    VoxelMarchOut VMO = VoxelMarch(voxel_pos, world_dir);
-	VMO.vPos -= VMO.plane * exp2(-12);
-	vec2 corner_texcoord = floor(unpackUnorm2x16(texelFetch(voxel_data_tex0, VMO.vCoord, 0).r) * atlas_size) / atlas_size;
-	vec2 tCoord = ((fract(VMO.vPos) * 2.0 - 1.0) * mat2x3(recover_tangent_mat(VMO.plane))) * 0.5 + 0.5;
-	
-	vec4 voxel_data = unpackUnorm4x8(texelFetch(voxel_data_tex1, VMO.vCoord, 0).r);
-    int block_id = int((1.0 - voxel_data.z) * 255.0);
-    vec4 diffuse = texture(atlas_tex, corner_texcoord + tCoord / atlas_size * 16.0);
-    vec3 vertex_color = hsv_to_rgb(vec3(voxel_data.xy, 1.0));
-	mat3 tangent_mat = recover_tangent_mat(VMO.plane);
-    bool hit = true;
+    RayStruct first;
+    first.voxel_pos = voxel_pos;
+    first.world_dir = world_dir;
+    first.absorb    = vec3(0.5);
+    first.info      = 0 | PRIMARY_RAY_TYPE;
     
-    if (is_sub_voxel(block_id)) {
-        subvoxel_intersect(block_id, world_dir, corner_texcoord, 16.0 / atlas_size,
-            VMO.vPos, tangent_mat, tCoord, hit);
+    ray_stack_push(first);
+    
+    int ray_count = 0;
+    while (!ray_stack_empty() && ray_count++ < 4) {
+        RayStruct curr = ray_pop();
         
-        if (hit) {
-            diffuse = texture(atlas_tex, corner_texcoord + (tCoord + vec2(0,-0 / 16.0)) / atlas_size * 16.0);
+        VoxelMarchOut VMO = VoxelMarch(curr.voxel_pos, curr.world_dir);
+        
+        
+        if (!bool(VMO.hit)) {
+            if (is_sunlight_ray(curr))
+                color += curr.absorb * vec3(1.0);
+            else
+                color += curr.absorb * vec3(1.0);//ComputeTotalSky(VoxelToWorldSpace(VMO.vPos), curr.wDir, curr.absorb, IsPrimaryRay(curr)) * skyBrightness;
+            
+            continue;
         }
-    }
-    
-	gl_FragData[0] = diffuse * vec4(vertex_color, 1.0);
-    
-    if (bool(VMO.hit)) {
-        vec3 sun_ray = normalize(vec3(0.5, 1.0, 0.3));
-        // sun_ray = recover_tangent_mat(VMO.plane) * CalculateConeVector(RandNextF(), radians(90.0), 32);
         
-        VoxelMarchOut VMO2 = VoxelMarch(VMO.vPos + VMO.plane * exp2(-11), sun_ray);
-        gl_FragData[0] *= (bool(VMO2.hit) ? 0.5 : 1.0);
+        if (is_sunlight_ray(curr))
+            continue;
+        
+        
+        uint packed_voxel_data = texelFetch(voxel_data_tex0, VMO.vCoord + DATA0, 0).r;
+        int  block_id = decode_block_id(packed_voxel_data);
+        float hue = decode_hue(packed_voxel_data);
+        float sat = decode_sat(packed_voxel_data);
+        
+        vec2 corner_texcoord;
+        vec2 tCoord;
+        
+        if (is_AABB(packed_voxel_data)) {
+            vec3 fract_pos = fract(VMO.vPos - VMO.plane * exp2(-12));
+            
+            IntersectAABB(fract_pos, curr.world_dir, unpack_AABB(bounds[block_id/4][block_id%4]), VMO.plane);
+            
+            tCoord = (((fract_pos-vec3(0)) * 2.0 - 1.0) * mat2x3(recover_tangent_mat(VMO.plane))) * 0.5 + 0.5;
+        } else {
+            tCoord = ((fract(VMO.vPos) * 2.0 - 1.0) * mat2x3(recover_tangent_mat(VMO.plane))) * 0.5 + 0.5;
+        }
+        
+        corner_texcoord = floor(unpackUnorm2x16(texelFetch(voxel_data_tex0, VMO.vCoord, 0).r) * atlas_size) / atlas_size;
+        
+        ivec2 texel_coord = ivec2(corner_texcoord*atlas_size + tCoord * 16.0);
+        
+        vec4 diffuse = texelFetch(atlas_tex, texel_coord, 0);
+        diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
+        diffuse.rgb *= hsv_to_rgb(vec3(hue, sat, 1.0));
+        
+        mat3 tangent_mat = recover_tangent_mat(VMO.plane);
+        
+        vec4 tex_n = texelFetch(atlas_tex_n, texel_coord, 0);
+        vec4 tex_s = texelFetch(atlas_tex_s, texel_coord, 0);
+        
+        vec3 normal;
+        normal.xy = tex_n.xy * 2.0 - 1.0;
+        normal.z = sqrt(1.0 - dot(normal.xy, normal.xy));
+        
+        normal = tangent_mat * normal;
+        
+        float roughness = 1.0 - tex_s.r;
+        roughness *= roughness;
+        
+        // color += diffuse.rgb * curr.absorb;
+        
+        #define DO_SUNLIGHT_RAYS
+        #define DO_AMBIENT_RAYS
+        
+        #ifdef DO_SUNLIGHT_RAYS
+            curr.voxel_pos = VMO.vPos + VMO.plane * exp2(-11);
+            curr.world_dir = normalize(vec3(0.5, 1.0, 0.3));
+            curr.absorb    *= diffuse.rgb;
+            curr.info      = (get_ray_depth(curr) + 1) | SUNLIGHT_RAY_TYPE;
+            
+            ray_stack_push(curr);
+        #endif
+        
+        #ifdef DO_AMBIENT_RAYS
+            curr.voxel_pos = VMO.vPos + VMO.plane * exp2(-11);
+            curr.world_dir = tangent_mat * CalculateConeVector(RandNextF(), radians(60), 32);
+            curr.absorb    *= diffuse.rgb;
+            curr.info      = (get_ray_depth(curr) + 1) | AMBIENT_RAY_TYPE;
+            
+            ray_stack_push(curr);
+        #endif
+        
     }
+    
+    gl_FragData[0].rgb = color;
+    
+    exit();
 }

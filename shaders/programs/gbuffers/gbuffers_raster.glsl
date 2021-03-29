@@ -20,11 +20,6 @@ uniform float frameTimeCounter;
 
 #include "../../includes/Voxelization.glsl"
 
-layout (r32ui) uniform uimage2D sparse_data_img0;
-layout (r32ui) uniform uimage2D sparse_data_img1;
-layout (r32ui) uniform uimage2D voxel_data_img0;
-layout (r32ui) uniform uimage2D voxel_data_img1;
-
 out mat3 tangent_mat;
 out vec4 vertex_color;
 out vec3 world_pos;
@@ -48,7 +43,7 @@ void main() {
     vertex_color = gl_Color;
     texcoord     = gl_MultiTexCoord0.xy;
     tangent_mat  = get_tangent_mat();
-    block_id     = backport_id(int(mc_Entity.x));
+    block_id     = backport_id(int(mc_Entity.x)) % 256;
     mid_texcoord = mc_midTexCoord;
     
     world_pos    = (gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex).xyz;
@@ -74,9 +69,7 @@ uniform float far;
 #include "../../includes/Voxelization.glsl"
 
 layout (r32ui) uniform uimage2D sparse_data_img0;
-layout (r32ui) uniform uimage2D sparse_data_img1;
 layout (r32ui) uniform uimage2D voxel_data_img0;
-layout (r32ui) uniform uimage2D voxel_data_img1;
 
 in mat3 tangent_mat[];
 in vec4 vertex_color[];
@@ -130,20 +123,16 @@ void main() {
     // This section selects the bad faces that steal priority from the good faces, and culls them by doing return.
     if (abs(dot(world_pos[0] - world_pos[1], world_pos[2] - world_pos[1])) < 0.001) return;
     
-    if ((block_id[0] == 3
+    if (((block_id[0] == 3
       || block_id[0] == 4
-      || (block_id[0] >= 6 && block_id[0] <= 12)) && abs(tangent_mat[0][2].y) < 0.9)
+      || (block_id[0] >=  6 && block_id[0] <= 12)) && abs(tangent_mat[0][2].y) < 0.9)
+      || ((block_id[0] >= 14 && block_id[0] <= 21) && abs(tangent_mat[0][2].y) < 0.9)
+    )
         return;
     
     if (block_id[0] == 5 && (abs(tangent_mat[0][2]).y < 0.9 || abs(fract(WorldToVoxelSpace(tri_centroid).y) - 0.5) > 0.1 )) return;
     
-    
-    // vec2  mid_delta        = mid_texcoord[0] - texcoord[0];
-    // vec2  tex_dir          = sign(mid_delta) * vec2(1.0, sign(at_tangent.w));
-    // vec3  voxel_center     = tangent_mat * vec3(tex_dir, -1.0) * 0.01;
-    // vec3  centered_pos     = world_pos + voxel_center / 2.0;
-    uvec3 voxel_pos = uvec3(WorldToVoxelSpace(tri_centroid));
-    
+    ivec3 voxel_pos = ivec3(WorldToVoxelSpace(tri_centroid));
     
     // Store into chunk bitmap so that this chunk will be allocated next frame.
     imageStore(sparse_data_img0, get_sparse_chunk_coord(voxel_pos), uvec4(1));
@@ -155,7 +144,7 @@ void main() {
     imageStore(sparse_data_img0, get_sparse_chunk_coord(voxel_pos + ivec3(0, 0, chunk_grow.y)), uvec4(1));
     
     // If this chunk was allocated in the previous frame
-    bool alloc_flag = imageLoad(sparse_data_img1, get_sparse_chunk_coord(voxel_pos)).r != 0;
+    bool alloc_flag = imageLoad(sparse_data_img0, get_sparse_chunk_coord(voxel_pos) + SPARSE0).r != 0;
     if (!alloc_flag)
         return;
     
@@ -163,15 +152,23 @@ void main() {
     vec2 corner_texcoord   = mid_texcoord[0] - abs(mid_texcoord[0] - texcoord[0]);
     uint packed_tex_coord  = packUnorm2x16(corner_texcoord);
     
-    vec2 hue_sat = rgb_to_hsv(vertex_color[0].rgb).xy;
-    vec4 voxel_data        = vec4(hue_sat, 1.0 - block_id[0] / 255.0, 0.0);
-    uint packed_voxel_data = packUnorm4x8(voxel_data);
+    vec2 hue_sat           = rgb_to_hsv(vertex_color[0].rgb).rg;
+    uint packed_voxel_data = 0;
+    packed_voxel_data |= block_id[0];
+    packed_voxel_data |= int(clamp(hue_sat.r, 0.0, 1.0) * 255.0) << VMB_hue_start;
+    packed_voxel_data |= int(clamp(hue_sat.g, 0.0, 1.0) * 255.0) << VMB_sat_start;
+    if (is_sub_voxel(block_id[0])) packed_voxel_data |= VBM_AABB_bit;
     
-    imageAtomicMax(voxel_data_img0, get_sparse_voxel_coord(sparse_data_img1, voxel_pos, 0), packed_tex_coord);
-    imageAtomicMax(voxel_data_img1, get_sparse_voxel_coord(sparse_data_img1, voxel_pos, 0), packed_voxel_data);
     
-    for (int lod = 1; lod <= 4; ++lod) {
-        imageStore(voxel_data_img1, get_sparse_voxel_coord(sparse_data_img1, voxel_pos, lod), uvec4(1));
+    uint chunk_addr = imageLoad(sparse_data_img0, get_sparse_chunk_coord(voxel_pos) + SPARSE0).r;
+    ivec2 chunk_coord = get_sparse_voxel_coord(chunk_addr, voxel_pos, 0);
+    
+    imageAtomicMax(voxel_data_img0, chunk_coord, packed_tex_coord);
+    imageAtomicMax(voxel_data_img0, chunk_coord + DATA0, packed_voxel_data);
+    
+    for (int lod = 1; lod <= 7; ++lod) {
+        chunk_coord = get_sparse_voxel_coord(chunk_addr, voxel_pos, lod);
+        imageStore(voxel_data_img0, chunk_coord + DATA0, uvec4(1));
     }
 }
 
@@ -188,7 +185,7 @@ in vec4 _vertex_color;
 in vec3 _world_pos;
 in vec2 _texcoord;
 
-/* DRAWBUFFERS:8 */
+/* DRAWBUFFERS:89 */
 
 void main() {
     vec4 diffuse = texture(tex, _texcoord);
@@ -200,6 +197,7 @@ void main() {
     diffuse.rgb *= _vertex_color.rgb * _vertex_color.a;
     
     gl_FragData[0] = diffuse;
+    gl_FragData[1] = vec4(_tangent_mat[2], 0.0);
 }
 
 #endif

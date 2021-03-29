@@ -13,7 +13,6 @@ uniform float far;
 #include "../../includes/Voxelization.glsl"
 
 layout (r32ui) uniform uimage2D sparse_data_img0;
-layout (r32ui) uniform uimage2D sparse_data_img1;
 
 uniform usampler2D sparse_data_tex0;
 
@@ -42,7 +41,7 @@ void main()  {
     imageStore(sparse_data_img0, ivec2(gl_GlobalInvocationID.xy), uvec4(data));
     
     // Store boolean mask for later
-    imageStore(sparse_data_img1, ivec2(gl_GlobalInvocationID.xy), uvec4(pix));
+    imageStore(sparse_data_img0, ivec2(gl_GlobalInvocationID.xy)+SPARSE0, uvec4(pix));
 }
 #endif
 /**********************************************************************/
@@ -103,24 +102,21 @@ vec2 texcoord = gl_GlobalInvocationID.xy / viewSize * MC_RENDER_QUALITY;
 #include "../../includes/Voxelization.glsl"
 
 layout (r32ui) uniform uimage2D sparse_data_img0;
-layout (r32ui) uniform uimage2D sparse_data_img1;
+layout (rgba32ui) uniform uimage2D voxel_data_img0;
 
 uniform usampler2D sparse_data_tex0;
-uniform usampler2D sparse_data_tex1;
 
 layout (local_size_x = 16, local_size_y = 16) in;
 const ivec3 workGroups = ivec3(32, 32, 1);
 
 
 void main() {
-    // imageStore(sparse_data_img1, ivec2(gl_GlobalInvocationID), imageLoad(sparse_data_img0, ivec2(gl_GlobalInvocationID)) );
-    
-    // return;
-    
-    imageStore(sparse_data_img1, ivec2(gl_GlobalInvocationID.xy),
-    uvec4( texelFetch(sparse_data_tex1, ivec2(gl_GlobalInvocationID.xy), 0).r * 
+    uvec4 data =
+    uvec4( texelFetch(sparse_data_tex0, ivec2(gl_GlobalInvocationID.xy) + SPARSE0, 0).r * 
       (texelFetch(sparse_data_tex0, ivec2(gl_GlobalInvocationID.xy), 0).x
-      + texelFetch(sparse_data_tex0, ivec2(gl_GlobalInvocationID.y, sparse_chunk_map_size), 0).x )));
+      + texelFetch(sparse_data_tex0, ivec2(gl_GlobalInvocationID.y, sparse_chunk_map_size), 0).x ));
+    
+    imageStore(sparse_data_img0, ivec2(gl_GlobalInvocationID.xy) + SPARSE0, data);
     
     // Clear sparse_data_tex0 for the next frame of rendering
     imageStore(sparse_data_img0, ivec2(gl_GlobalInvocationID.xy), uvec4(0));
