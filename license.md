@@ -1,0 +1,1 @@
+100% copyleft property and invention of BruceKnowsHow. That's that.

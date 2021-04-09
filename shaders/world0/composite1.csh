@@ -3,4 +3,4 @@
 #define composite1
 #define csh
 
-#include "../programs/composite/composite1.glsl"
+#include "../programs/composite/C1_Ray1.glsl"

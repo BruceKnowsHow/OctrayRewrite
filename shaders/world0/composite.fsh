@@ -3,4 +3,4 @@
 #define composite0
 #define fsh
 
-#include "../programs/composite/composite0.glsl"
+#include "../programs/composite/C0_Raytracing.glsl"
