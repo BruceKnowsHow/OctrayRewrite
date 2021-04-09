@@ -24,7 +24,10 @@ void inc( vec4 x) { Debug += x.rgb; }
 
 #if defined fsh
 	void exit() { imageStore(colorimg5, ivec2(gl_FragCoord.xy), vec4(Debug, 0.0)); }
+#elif defined csh
+	void exit(ivec2 screenCoord) { imageStore(colorimg5, screenCoord, vec4(Debug, 0.0)); }
 #endif
+
 
 // #ifdef DRAW_DEBUG_VALUE
 // 	// Display the value of the variable on the debug value viewer

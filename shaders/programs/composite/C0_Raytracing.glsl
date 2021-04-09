@@ -107,7 +107,7 @@ void main() {
         RayStruct curr;
         curr.voxelPos = voxelPos + flatNormal * exp2(-11);
         curr.voxelPos = texture(colortex12, texcoord).rgb;
-        show(abs(curr.voxelPos - voxelPos) *100.0)
+        
         curr.worldDir = worldDir;
         curr.absorb    = pow(diffuse.rgb, vec3(2.2));
         curr.absorb    = HSVtoRGB(pow(RGBtoHSV(curr.absorb), vec3(1.0, 1.0, 1.0)));

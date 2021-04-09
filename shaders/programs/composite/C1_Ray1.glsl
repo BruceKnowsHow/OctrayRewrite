@@ -10,6 +10,8 @@ uniform float frameTimeCounter;
 uniform float far;
 uniform int frameCounter;
 
+#include "../../includes/Debug.glsl"
+
 
 // Voxelization and voxel intersection
 #include "../../includes/Voxelization.glsl"
@@ -28,7 +30,6 @@ uniform usampler2D sparse_data_tex0;
 // Path tracing & ray buffer
 layout (rgba32f) uniform image2D colorimg2;
 layout (r32i) uniform iimage2D colorimg3;
-layout (rgba8) uniform image2D colorimg5;
 #include "../../includes/Raybuffer.glsl"
 #include "../../includes/Pathtracing.glsl"
 /**********************************************************************/
@@ -127,8 +128,7 @@ void main()  {
         vec2 cornerTexcoord = floor(unpackUnorm2x16(texelFetch(voxel_data_tex0, VIO.voxel_coord, 0).r) * atlasSize) / atlasSize;
         
         vec2 spriteSize;
-        int ebin = decode_sprite_size(packedVoxelData);
-        spriteSize = exp2(vec2(ebin));
+        spriteSize = exp2(vec2(decode_sprite_size(packedVoxelData)));
         
         ivec2 texel_coord = ivec2(cornerTexcoord * atlasSize + tCoord * spriteSize);
         
@@ -147,14 +147,6 @@ void main()  {
         
         vec4 tex_n = texelFetch(atlas_tex_n, texel_coord, 0);
         vec4 tex_s = texelFetch(atlas_tex_s, texel_coord, 0);
-        
-        // vec3 normal;
-        // normal.xy = tex_n.xy * 2.0 - 1.0;
-        // normal.z = sqrt(max(1.0 - dot(normal.xy, normal.xy), 0.0));
-        // normal = normalize(normal);
-        
-        // vec3 surfaceNormal = tanMat * normal;
-        
         
         curr.absorb *= diffuse.rgb;
         curr.voxelPos = VIO.voxelPos + VIO.plane * exp2(-11);
@@ -185,105 +177,5 @@ void main()  {
         WriteBufferedRay(qBack, buf, specRay);
         WriteBufferedRay(qBack, buf, ambRay);
         WriteBufferedRay(qBack, buf, sunRay);
-        
-        // vec4 diffuse, vec4 tex_n, vec4 tex_s, mat3 tanMat, vec3 worldDir,
-        //           inout RayStruct specRay, inout RayStruct ambRay, inout RayStruct sunRay
-        
-        // bool isMetal = tex_s.g > 229.5/255.0;
-        
-        // float roughness = pow(1.0 - tex_s.r, 2.0);
-        // vec3 F0 = (isMetal) ? diffuse.rgb : vec3(tex_s.g);
-        
-        // RayStruct specular = curr;
-        
-        // specular.info = (GetRayDepth(specular) + 1) | SPECULAR_RAY_TYPE;
-        
-        // vec2 uv = RandNext2F();
-        
-        // vec3 V = reflect(curr.worldDir, surfaceNormal);
-        // mat3 atbn = ArbitraryTBN(V);
-        // specular.worldDir = normalize(atbn * GGXVNDFSample(V * atbn, roughness*roughness, uv));
-        
-        // float cosTheta = dot(specular.worldDir, surfaceNormal);
-        // float G = GeometrySmith(surfaceNormal, -curr.worldDir, specular.worldDir, roughness);
-        
-        // vec3 F = fresnelSchlick(cosTheta, vec3(F0));
-        // vec3 numerator = G * F;
-        
-        // float denominator = (4.0*0+1) * max(dot(surfaceNormal, -curr.worldDir), 0.0) * max(dot(surfaceNormal, specular.worldDir), 0.0);
-        
-        // vec3 spec = numerator / max(denominator, 0.001);
-        
-        // vec3 kS = F;
-        // vec3 kD = (1.0 - kS) * float(!isMetal);
-        
-        // float NdotL = max(dot(surfaceNormal, specular.worldDir), 0.0);
-        
-        // vec3 Li = (kD * diffuse.rgb*0 * 4.0 + spec) * NdotL;
-        
-        // specular.absorb = curr.absorb * Li * float(dot(specular.worldDir, VIO.plane) > 0.0);
-        
-        
-        // RayStruct ambient = curr;
-        // ambient.worldDir = ArbitraryTBN(surfaceNormal) * CalculateConeVector(RandNextF(), radians(90.0), 32);
-        // ambient.absorb   *= float(dot(ambient.worldDir, VIO.plane) > 0.0) * float(!isMetal);
-        // ambient.info      = (GetRayDepth(ambient) + 1) | AMBIENT_RAY_TYPE;
-        
-        
-        // RayStruct sunlight = curr;
-        
-        // vec3 sun_direction = ArbitraryTBN(sunDirection)*CalculateConeVector(RandNextF(), radians(1.0), 32);
-        // sunlight.absorb *= max(0.0, dot(sun_direction, surfaceNormal)) * mix(vec3(1.0), kD, isMetal);
-        // sunlight.worldDir = normalize(sun_direction);
-        // sunlight.info      = (GetRayDepth(sunlight) + 1) | SUNLIGHT_RAY_TYPE;
-        
-        // WriteBufferedRay(qBack, buf, specular);
-        // WriteBufferedRay(qBack, buf, ambient);
-        // WriteBufferedRay(qBack, buf, sunlight);
-        
-        
-        // if (gl_ThreadInWarpNV == findLSB(activeThreadsNV())) {
-        //     qBack = imageAtomicOr(buffer_count_img, raybufferBack, 0);
-        // }
-        
-        // qBack = shuffleNV(qBack, findLSB(activeThreadsNV()), 32);
-        
-        
-        // bool specRay = RayIsVisible(specular);
-        // bool ambRay = RayIsVisible(ambient);
-        // bool sunRay = RayIsVisible(sunlight);
-        
-        // uint specMask = ballotThreadNV(specRay);
-        // uint ambMask = ballotThreadNV(ambRay);
-        // uint sunMask = ballotThreadNV(sunRay);
-        
-        // int specRays = bitCount(specMask);
-        // int ambRays = bitCount(ballotThreadNV(ambRay));
-        // int sunRays = bitCount(ballotThreadNV(sunRay));
-        
-        // int ray_alloc = specRays + ambRays + sunRays;
-        
-        // uint first_thread = findLSB(activeThreadsNV());
-        
-        // int addr = 0;
-        // if (gl_ThreadInWarpNV == first_thread) {
-        //     addr = imageAtomicAdd(buffer_count_img, raybufferBack, ray_alloc);
-        // }
-        
-        // addr = shuffleNV(addr, first_thread, 32);
-        
-        // int specPrefix = bitCount(specMask & ((1 << gl_ThreadInWarpNV) - 1)) - 1;
-        // int ambPrefix = bitCount(ambMask & ((1 << gl_ThreadInWarpNV) - 1)) - 1;
-        // int sunPrefix = bitCount(sunMask & ((1 << gl_ThreadInWarpNV) - 1)) - 1;
-        
-        // int specAddr = addr + specPrefix;
-        // int ambAddr = addr + ambPrefix + specRays;
-        // int sunAddr = addr + sunPrefix + specRays + ambRays;
-        
-        // if (specRay) { PackBufferedRay(buf, specular); WriteBufferedRay(specAddr, buf); }
-        // if (ambRay) { PackBufferedRay(buf, ambient); WriteBufferedRay(ambAddr, buf); }
-        // if (sunRay) { PackBufferedRay(buf, sunlight); WriteBufferedRay(sunAddr, buf); }
-        
-        // qBack = addr + ray_alloc;
     }
 }
