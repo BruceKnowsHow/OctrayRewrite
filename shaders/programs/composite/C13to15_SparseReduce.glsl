@@ -2,7 +2,7 @@
 uniform int frameCounter;
 
 /**********************************************************************/
-#if defined composite8
+#if defined composite13
 
 uniform mat4 gbufferModelViewInverse;
 uniform vec3 cameraPosition;
@@ -49,7 +49,7 @@ void main()  {
 
 
 /**********************************************************************/
-#if defined composite9
+#if defined composite14
 
 uniform mat4 gbufferModelViewInverse;
 uniform vec3 cameraPosition;
@@ -89,7 +89,7 @@ void main() {
 
 
 /**********************************************************************/
-#if defined composite10
+#if defined composite15
 
 uniform mat4 gbufferModelViewInverse;
 uniform vec3 cameraPosition;
