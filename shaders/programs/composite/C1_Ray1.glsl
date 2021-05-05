@@ -1,5 +1,5 @@
-layout (local_size_x = 32, local_size_y = 4) in;
-const ivec3 workGroups = ivec3(1024, 8, 1);
+layout (local_size_x = 32, local_size_y = 32) in;
+const ivec3 workGroups = ivec3(128, 8, 1);
 
 uniform mat4 gbufferModelViewInverse;
 uniform vec3 cameraPosition;

@@ -35,7 +35,8 @@ void DoPBR(vec4 diffuse, vec3 surfaceNormal, vec3 flatNormal, vec4 tex_s, vec3 w
     
     ambRay.worldDir = ArbitraryTBN(surfaceNormal) * CalculateConeVector(RandNextF(), radians(90.0), 32);
     ambRay.absorb *= float(!isMetal);
-    ambRay.absorb *= float(dot(ambRay.worldDir, flatNormal) > 0.0) * float(GetRayDepth(ambRay) < 2);
+    // ambRay.absorb *= float(dot(ambRay.worldDir, flatNormal) > 0.0) * float(GetRayDepth(ambRay) < 2);
+    ambRay.absorb *= float(dot(ambRay.worldDir, flatNormal) > 0.0);
     
     sunRay.worldDir = normalize(ArbitraryTBN(sunDirection)*CalculateConeVector(RandNextF(), radians(1.0), 32));
     sunRay.absorb *= max(0.0, dot(sunRay.worldDir, surfaceNormal)) * mix(vec3(1.0), kD, isMetal);
