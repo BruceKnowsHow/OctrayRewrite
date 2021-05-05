@@ -98,6 +98,8 @@ vec3 VoxelToWorldSpace(vec3 position) {
     return position - WtoV;
 }
 
+const uint chunk_locked_bit = 1 << 31;
+const uint chunk_addr_mask = ~chunk_locked_bit;
 
 // Get the base address of all voxel data with this lod
 int get_lod_base_addr(int lod) {

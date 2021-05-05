@@ -20,6 +20,8 @@ uniform float frameTimeCounter;
 
 #include "../../includes/Voxelization.glsl"
 
+layout (r32ui) uniform uimage2D sparse_data_img0;
+
 out mat3 tanMat;
 out vec4 vertexColor;
 out vec3 worldPos;
@@ -51,6 +53,19 @@ void main() {
     voxelPos    = WorldToVoxelSpace(worldPos) + tanMat[2] * exp2(-11);
     
     gl_Position = gbufferProjection * gbufferModelView * vec4(worldPos, 1.0);
+    
+    vec2 texDirection = sign(texcoord - mc_midTexCoord)*vec2(1,sign(at_tangent.w));
+    vec3 triCentroid = worldPos.xyz - (tanMat * vec3(texDirection,0.5));
+    ivec3 voxelPos = ivec3(WorldToVoxelSpace(triCentroid));
+    ivec2 CC = get_sparse_chunk_coord(voxelPos);
+    
+    if ((imageLoad(sparse_data_img0, CC).r & chunk_locked_bit) == 0) {
+        if ((imageAtomicOr(sparse_data_img0, CC, chunk_locked_bit) & chunk_locked_bit) == 0) {
+            uint index = imageAtomicAdd(sparse_data_img0, ivec2(0, 512), 1);
+            
+            imageAtomicOr(sparse_data_img0, CC, index);
+        }
+    }
 }
 
 #endif
@@ -121,20 +136,6 @@ void main() {
     
     ivec3 voxelPos = ivec3(WorldToVoxelSpace(triCentroid));
     
-    // Store into chunk bitmap so that this chunk will be allocated next frame.
-    imageStore(sparse_data_img0, get_sparse_chunk_coord(voxelPos), uvec4(1));
-    
-    // Allocate extra chunks along the movement vector.
-    // This prevents flickering when stepping over chunk borders.
-    vec2 chunkGrow = 16.0 * sign(previousCameraPosition.xz - cameraPosition.xz);
-    imageStore(sparse_data_img0, get_sparse_chunk_coord(voxelPos + ivec3(chunkGrow.x, 0, 0)), uvec4(1));
-    imageStore(sparse_data_img0, get_sparse_chunk_coord(voxelPos + ivec3(0, 0, chunkGrow.y)), uvec4(1));
-    
-    // If this chunk was allocated in the previous frame
-    bool allocFlag = imageLoad(sparse_data_img0, get_sparse_chunk_coord(voxelPos) + SPARSE0).r != 0;
-    if (!allocFlag)
-        return;
-    
     // Store all of its data into the sparse texture
     vec2 cornerTexcoord   = midTexcoord[0] - abs(midTexcoord[0] - texcoord[0]);
     vec2 spriteSize       = abs(midTexcoord[0] - texcoord[0]) * 2.0 * atlasSize;
@@ -148,8 +149,7 @@ void main() {
     packedVoxelData |= int(round(log2(spriteSize.x))) << VMB_sprite_size_start;
     if (is_sub_voxel(blockID[0])) packedVoxelData |= VBM_AABB_bit;
     
-    
-    uint chunkAddr = imageLoad(sparse_data_img0, get_sparse_chunk_coord(voxelPos) + SPARSE0).r;
+    uint chunkAddr = imageLoad(sparse_data_img0, get_sparse_chunk_coord(voxelPos)).r & chunk_addr_mask;
     ivec2 chunkCoord = get_sparse_voxel_coord(chunkAddr, voxelPos, 0);
     
     imageAtomicMax(voxel_data_img0, chunkCoord, packed_tex_coord);

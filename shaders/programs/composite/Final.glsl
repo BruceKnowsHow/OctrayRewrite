@@ -1,7 +1,7 @@
 /*
 layout (r32ui) uniform uimage2D colorimg0;
 const int  colortex0Format = R32UI;
-const bool colortex0Clear = false;
+const bool colortex0Clear = true;
 const vec4 colortex0ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 
 layout (r32ui) uniform uimage2D colorimg1;
@@ -27,10 +27,6 @@ const vec4 colortex4ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 const int colortex9Format = RGBA32F;
 const bool colortex9Clear = false;
 const vec4 colortex9ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
-
-const int colortex5Format = RGBA8;
-const bool colortex5Clear = true;
-const vec4 colortex5ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 
 const int colortex6Format = RGBA8;
 const int colortex7Format = RGB16F;
