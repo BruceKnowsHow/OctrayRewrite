@@ -45,10 +45,11 @@ uniform sampler3D sky_tex;
 void main()  {
     uint qFront = RaybufferReadWarp(raybuffer_front);
     uint qBack  = RaybufferReadWarp(raybuffer_back);
+    int queue_size = int(qBack) - int(qFront);
     
     int count = 0;
     
-    while (qFront < qBack && count++ < 128) {
+    while (queue_size > 0 && queue_size < ray_queue_cap && count++ < 128) {
         qFront = RaybufferPopWarp();
         
         BufferedRay buf = ReadBufferedRay(qFront);
@@ -154,5 +155,7 @@ void main()  {
         WriteBufferedRay(qBack, buf, specRay);
         WriteBufferedRay(qBack, buf, ambRay);
         WriteBufferedRay(qBack, buf, sunRay);
+        
+        queue_size = int(qBack) - int(qFront);
     }
 }

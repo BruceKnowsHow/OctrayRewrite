@@ -102,7 +102,7 @@ uint RaybufferIncrementWarp(const ivec2 index) {
 #define RaybufferPushWarp() RaybufferIncrementWarp(raybuffer_back)
 #define RaybufferPopWarp()  RaybufferIncrementWarp(raybuffer_front)
 
-ivec2 ray_buffer_dims = ivec2(4096, 16384);
+ivec2 ray_buffer_dims = ivec2(16384, 4096);
 
 const int ray_queue_cap = int(ray_buffer_dims.x * ray_buffer_dims.y);
 
