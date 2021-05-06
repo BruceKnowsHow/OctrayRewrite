@@ -250,7 +250,7 @@ VoxelIntersectOut VoxelIntersect(vec3 voxelPos, vec3 worldDir) {
         chunk_addr = texelFetch(sparse_data_tex0, get_sparse_chunk_coord(uvPos), 0).r;
         voxel_coord = get_sparse_voxel_coord(chunk_addr & chunk_addr_mask, uvPos, lod);
         uint data = 0;
-        if (chunk_addr != 0)
+        if (lod > 4 || chunk_addr != 0)
             data = texelFetch(voxel_data_tex0, voxel_coord + DATA0, 0).x;
         hit = int(data != 0);
         lod -= hit;
