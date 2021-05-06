@@ -1,5 +1,4 @@
 uniform sampler2D colortex9;
-uniform sampler2D colortex2;
 uniform sampler2D colortex8;
 uniform sampler2D colortex5;
 uniform sampler2D depthtex0;
@@ -7,6 +6,7 @@ uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferModelView;
 uniform vec3 cameraPosition;
 uniform vec2 viewSize;
+uniform float far;
 uniform bool accum;
 
 vec2 texcoord = gl_FragCoord.xy / viewSize;
@@ -15,7 +15,7 @@ vec2 texcoord = gl_FragCoord.xy / viewSize;
 
 
 // Atomic color read
-#define screen_color_tex colortex4
+#define screen_color_tex colortex2
 uniform usampler2D screen_color_tex;
 
 vec3 DecodeColor(uvec2 enc) {

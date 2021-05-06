@@ -61,6 +61,9 @@ bool IsPrimaryRay (RayStruct ray) { return ((ray.info & PRIMARY_RAY_TYPE)  != 0)
 bool IsSpecularRay(RayStruct ray) { return ((ray.info & SPECULAR_RAY_TYPE) != 0); }
 bool IsTerminalRay(RayStruct ray) { return ((ray.info & TERMINAL_RAY_TYPE) != 0); }
 
+#define raybuffer_img colorimg1
+layout (rgba32f) uniform image2D raybuffer_img;
+
 uint GetRayDepth(RayStruct ray) { return ray.info & RAY_DEPTH_MASK; }
 
 uint RaybufferReadWarp(ivec2 index) {
@@ -108,9 +111,9 @@ BufferedRay ReadBufferedRay(uint index) {
     
     index = (index * 4) % ray_queue_cap;
     
-    buf._0 = imageLoad(colorimg2, ivec2((index    ) % ray_buffer_dims.x, index / ray_buffer_dims.x));
-    buf._1 = imageLoad(colorimg2, ivec2((index + 1) % ray_buffer_dims.x, index / ray_buffer_dims.x));
-    buf._2 = imageLoad(colorimg2, ivec2((index + 2) % ray_buffer_dims.x, index / ray_buffer_dims.x));
+    buf._0 = imageLoad(raybuffer_img, ivec2((index    ) % ray_buffer_dims.x, index / ray_buffer_dims.x));
+    buf._1 = imageLoad(raybuffer_img, ivec2((index + 1) % ray_buffer_dims.x, index / ray_buffer_dims.x));
+    buf._2 = imageLoad(raybuffer_img, ivec2((index + 2) % ray_buffer_dims.x, index / ray_buffer_dims.x));
     
     return buf;
 }
@@ -118,9 +121,9 @@ BufferedRay ReadBufferedRay(uint index) {
 void WriteBufferedRay(uint index, BufferedRay buf) {
     index = (index * 4) % ray_queue_cap;
     
-    imageStore(colorimg2, ivec2((index   )  % ray_buffer_dims.x, index / ray_buffer_dims.x), buf._0);
-    imageStore(colorimg2, ivec2((index + 1) % ray_buffer_dims.x, index / ray_buffer_dims.x), buf._1);
-    imageStore(colorimg2, ivec2((index + 2) % ray_buffer_dims.x, index / ray_buffer_dims.x), buf._2);
+    imageStore(raybuffer_img, ivec2((index   )  % ray_buffer_dims.x, index / ray_buffer_dims.x), buf._0);
+    imageStore(raybuffer_img, ivec2((index + 1) % ray_buffer_dims.x, index / ray_buffer_dims.x), buf._1);
+    imageStore(raybuffer_img, ivec2((index + 2) % ray_buffer_dims.x, index / ray_buffer_dims.x), buf._2);
 }
 
 bool RayIsVisible(RayStruct ray) {
@@ -133,6 +136,25 @@ void WriteBufferedRay(inout uint index, BufferedRay buf, RayStruct ray) {
     PackBufferedRay(buf, ray);
     index = RaybufferPushWarp();
     WriteBufferedRay(index, buf);
+}
+
+// Atomic color write
+#define screen_color_img colorimg2
+layout (r32ui) uniform uimage2D screen_color_img;
+
+uvec2 EncodeColor(vec3 color) {
+    color = color * 256;
+    color = clamp(color, vec3(0.0), vec3(1 << 15));
+    
+    uvec3 col = uvec3(color);
+    return uvec2(col.r + (col.g << 16), col.b);
+}
+
+void WriteColor(vec3 color, ivec2 screenCoord) {
+    uvec2 enc = EncodeColor(color);
+    
+    imageAtomicAdd(screen_color_img, screenCoord * ivec2(2, 1)              , enc.x);
+    imageAtomicAdd(screen_color_img, screenCoord * ivec2(2, 1) + ivec2(1, 0), enc.y);
 }
 
 #endif

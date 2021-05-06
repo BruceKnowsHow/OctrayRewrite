@@ -48,30 +48,9 @@ vec3 GetWorldSpacePosition(vec2 coord, float depth) {
     return pos.xyz;
 }
 
-layout (rgba32f) uniform image2D colorimg2;
-
 #include "../../includes/Raybuffer.glsl"
 #include "../../includes/Pathtracing.glsl"
 
-
-// Atomic color write
-#define screen_color_img colorimg4
-layout (r32ui) uniform uimage2D screen_color_img;
-
-uvec2 EncodeColor(vec3 color) {
-    color = color * 256;
-    color = clamp(color, vec3(0.0), vec3(1 << 15));
-    
-    uvec3 col = uvec3(color);
-    return uvec2(col.r + (col.g << 16), col.b);
-}
-
-void WriteColor(vec3 color, ivec2 screenCoord) {
-    uvec2 enc = EncodeColor(color);
-    
-    imageAtomicAdd(screen_color_img, screenCoord * ivec2(2, 1)              , enc.x);
-    imageAtomicAdd(screen_color_img, screenCoord * ivec2(2, 1) + ivec2(1, 0), enc.y);
-}
 /**********************************************************************/
 
 /* DRAWBUFFERS:8 */

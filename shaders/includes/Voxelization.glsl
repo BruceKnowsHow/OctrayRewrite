@@ -65,7 +65,7 @@ bool is_AABB(uint encoded) {
 const int sparse_chunk_map_size = 512;
 
 const int sparse_voxel_buffer_width = 16384;
-const int sparse_voxel_buffer_height = 12000;
+const int sparse_voxel_buffer_height = 16384;
 const int sparse_voxel_buffer_size = sparse_voxel_buffer_width * sparse_voxel_buffer_height;
 
 const int   const_voxel_radius     = 1024;
