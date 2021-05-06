@@ -8,11 +8,6 @@ const int colortex2Format = RGBA32F;
 const bool colortex2Clear = true;
 const vec4 colortex2ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 
-layout (r32i) uniform uimage2D colorimg3;
-const int colortex3Format = R32UI;
-const bool colortex3Clear = true;
-const vec4 colortex3ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
-
 layout (r32ui) uniform uimage2D colorimg4;
 const int colortex4Format = R32UI;
 const bool colortex4Clear = true;
@@ -31,7 +26,6 @@ const int colortex12Format = RGB32F;
 
 uniform sampler2D colortex9;
 uniform sampler2D colortex2;
-layout (r32ui) uniform uimage2D colorimg3;
 uniform sampler2D colortex8;
 uniform sampler2D colortex5;
 uniform mat4 gbufferModelViewInverse;
@@ -67,7 +61,6 @@ void main() {
     color.rgb = pow(color.rgb, vec3(1.4));
     
     gl_FragColor.rgb = color.rgb;
-    // gl_FragColor = vec4(imageLoad(colorimg3, ivec2(0, 0)).x / 1024 / 1024) / 20.0;
     
     #ifdef DEBUG
     gl_FragColor.rgb = texelFetch(colortex5, ivec2(texcoord * viewSize), 0).rgb;

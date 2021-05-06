@@ -63,18 +63,13 @@ bool IsTerminalRay(RayStruct ray) { return ((ray.info & TERMINAL_RAY_TYPE) != 0)
 
 uint GetRayDepth(RayStruct ray) { return ray.info & RAY_DEPTH_MASK; }
 
-#define buffer_count_img colorimg3
-
-const ivec2 raybufferFront = ivec2(0, 0);
-const ivec2 raybufferBack  = ivec2(1, 0);
-
 uint RaybufferReadWarp(ivec2 index) {
     uint first_thread = findLSB(uint(activeThreadsNV()));
     
     uint addr = 0;
     
     if (gl_ThreadInWarpNV == first_thread) {
-        addr = imageLoad(buffer_count_img, index).x;
+        addr = imageLoad(voxel_data_img, index).x;
     }
     
     return shuffleNV(addr, first_thread, 32);
@@ -93,7 +88,7 @@ uint RaybufferIncrementWarp(const ivec2 index) {
     uint addr = 0;
     
     if (gl_ThreadInWarpNV == first_thread) {
-        addr = imageAtomicAdd(buffer_count_img, index, rayAlloc);
+        addr = imageAtomicAdd(voxel_data_img, index, rayAlloc);
     }
     
     addr = shuffleNV(addr, first_thread, 32) + prefixSum;
@@ -101,8 +96,8 @@ uint RaybufferIncrementWarp(const ivec2 index) {
     return addr;
 }
 
-#define RaybufferPushWarp() RaybufferIncrementWarp(raybufferBack)
-#define RaybufferPopWarp()  RaybufferIncrementWarp(raybufferFront)
+#define RaybufferPushWarp() RaybufferIncrementWarp(raybuffer_back)
+#define RaybufferPopWarp()  RaybufferIncrementWarp(raybuffer_front)
 
 ivec2 ray_buffer_dims = ivec2(4096, 16384);
 

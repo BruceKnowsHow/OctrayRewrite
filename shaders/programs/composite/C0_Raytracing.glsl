@@ -29,6 +29,7 @@ uniform sampler3D sky_tex;
 #include "../../BlockMappings.glsl"
 
 uniform usampler2D voxel_data_tex;
+layout (r32ui) uniform uimage2D voxel_data_img;
 uniform  sampler2D atlas_tex      ;
 uniform  sampler2D atlas_tex_n    ;
 uniform  sampler2D atlas_tex_s    ;
@@ -48,7 +49,6 @@ vec3 GetWorldSpacePosition(vec2 coord, float depth) {
 }
 
 layout (rgba32f) uniform image2D colorimg2;
-layout (r32ui) uniform uimage2D colorimg3;
 
 #include "../../includes/Raybuffer.glsl"
 #include "../../includes/Pathtracing.glsl"

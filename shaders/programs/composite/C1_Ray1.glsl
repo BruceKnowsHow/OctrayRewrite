@@ -28,7 +28,7 @@ uniform int frameCounter;
 
 // Path tracing & ray buffer
 layout (rgba32f) uniform image2D colorimg2;
-layout (r32ui) uniform uimage2D colorimg3;
+layout (r32ui) uniform uimage2D voxel_data_img;
 #include "../../includes/Raybuffer.glsl"
 #include "../../includes/Pathtracing.glsl"
 /**********************************************************************/
@@ -65,8 +65,8 @@ uniform sampler3D sky_tex;
 
 
 void main()  {
-    uint qFront = RaybufferReadWarp(raybufferFront);
-    uint qBack  = RaybufferReadWarp(raybufferBack);
+    uint qFront = RaybufferReadWarp(raybuffer_front);
+    uint qBack  = RaybufferReadWarp(raybuffer_back);
     
     int count = 0;
     
