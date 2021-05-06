@@ -15,7 +15,6 @@ uniform int frameCounter;
 
 // Voxelization and voxel intersection
 #include "../../includes/Voxelization.glsl"
-uniform usampler2D sparse_data_tex0;
 #include "../../BlockMappings.glsl"
 #include "../../includes/VoxelIntersect.glsl"
 /**********************************************************************/
@@ -106,7 +105,7 @@ void main()  {
         if (GetRayDepth(curr) >= 3)
             continue;
         
-        uint packedVoxelData = texelFetch(voxel_data_tex0, VIO.voxel_coord + DATA0, 0).r;
+        uint packedVoxelData = texelFetch(voxel_data_tex, VIO.voxel_coord + DATA0, 0).r;
         int  blockID = decode_block_id(packedVoxelData);
         
         vec2 tCoord;
@@ -125,7 +124,7 @@ void main()  {
             tCoord = ((fract(VIO.voxelPos) * 2.0 - 1.0) * mat2x3(RecoverTangentMat(VIO.plane))) * 0.5 + 0.5;
         }
         
-        vec2 cornerTexcoord = floor(unpackUnorm2x16(texelFetch(voxel_data_tex0, VIO.voxel_coord, 0).r) * atlasSize) / atlasSize;
+        vec2 cornerTexcoord = floor(unpackUnorm2x16(texelFetch(voxel_data_tex, VIO.voxel_coord, 0).r) * atlasSize) / atlasSize;
         
         vec2 spriteSize;
         spriteSize = exp2(vec2(decode_sprite_size(packedVoxelData)));

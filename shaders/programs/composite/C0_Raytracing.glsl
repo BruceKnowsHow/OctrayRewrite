@@ -1,5 +1,4 @@
 uniform sampler2D depthtex0;
-uniform usampler2D colortex0;
 uniform sampler2D colortex6;
 uniform sampler2D colortex7;
 uniform sampler2D colortex8;
@@ -29,7 +28,7 @@ uniform sampler3D sky_tex;
 #include "../../includes/Voxelization.glsl"
 #include "../../BlockMappings.glsl"
 
-uniform usampler2D voxel_data_tex0;
+uniform usampler2D voxel_data_tex;
 uniform  sampler2D atlas_tex      ;
 uniform  sampler2D atlas_tex_n    ;
 uniform  sampler2D atlas_tex_s    ;

@@ -1,4 +1,4 @@
-uniform usampler2D voxel_data_tex0;
+uniform usampler2D voxel_data_tex;
 uniform  sampler2D atlas_tex      ;
 uniform  sampler2D atlas_tex_n    ;
 uniform  sampler2D atlas_tex_s    ;
@@ -211,10 +211,10 @@ VoxelIntersectOut VoxelIntersect(vec3 voxelPos, vec3 worldDir) {
     VoxelIntersectOut VIO;
     int steps = 0;
     
-    uint chunk_addr = texelFetch(sparse_data_tex0, get_sparse_chunk_coord(uvPos), 0).r;
+    uint chunk_addr = texelFetch(voxel_data_tex, get_sparse_chunk_coord(uvPos), 0).r;
     
     voxel_coord = get_sparse_voxel_coord(chunk_addr & chunk_addr_mask, uvPos, lod);
-    data = texelFetch(voxel_data_tex0, voxel_coord + DATA0, 0).x & 255;
+    data = texelFetch(voxel_data_tex, voxel_coord + DATA0, 0).x & 255;
     vec4 voxel_data = unpackUnorm4x8(data);
     int block_id = decode_block_id(data);
     if (data != 0 && is_sub_voxel(block_id) && SubvoxelIntersect(block_id, worldDir, fPos, VIO.plane)) {
@@ -247,11 +247,11 @@ VoxelIntersectOut VoxelIntersect(vec3 voxelPos, vec3 worldDir) {
         lod += int((newPos.z >> (lod+1)) != (oldPos >> (lod+1)));
         lod = min(lod, 7);
         uvPos = UnsortMinComp(newPos, uplane);
-        chunk_addr = texelFetch(sparse_data_tex0, get_sparse_chunk_coord(uvPos), 0).r;
+        chunk_addr = texelFetch(voxel_data_tex, get_sparse_chunk_coord(uvPos), 0).r;
         voxel_coord = get_sparse_voxel_coord(chunk_addr & chunk_addr_mask, uvPos, lod);
         uint data = 0;
         if (lod > 4 || chunk_addr != 0)
-            data = texelFetch(voxel_data_tex0, voxel_coord + DATA0, 0).x;
+            data = texelFetch(voxel_data_tex, voxel_coord + DATA0, 0).x;
         hit = int(data != 0);
         lod -= hit;
         

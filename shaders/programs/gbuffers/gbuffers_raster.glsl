@@ -20,7 +20,7 @@ uniform float frameTimeCounter;
 
 #include "../../includes/Voxelization.glsl"
 
-layout (r32ui) uniform uimage2D sparse_data_img0;
+layout (r32ui) uniform uimage2D voxel_data_img;
 
 out mat3 tanMat;
 out vec4 vertexColor;
@@ -59,11 +59,10 @@ void main() {
     ivec3 voxelPos = ivec3(WorldToVoxelSpace(triCentroid));
     ivec2 CC = get_sparse_chunk_coord(voxelPos);
     
-    if ((imageLoad(sparse_data_img0, CC).r & chunk_locked_bit) == 0) {
-        if ((imageAtomicOr(sparse_data_img0, CC, chunk_locked_bit) & chunk_locked_bit) == 0) {
-            uint index = imageAtomicAdd(sparse_data_img0, ivec2(0, 512), 1);
+    if ((imageLoad(voxel_data_img, CC).r & chunk_locked_bit) == 0) {
+        if ((imageAtomicOr(voxel_data_img, CC, chunk_locked_bit) & chunk_locked_bit) == 0) {
             
-            imageAtomicOr(sparse_data_img0, CC, index);
+            imageAtomicOr(voxel_data_img, CC, imageAtomicAdd(voxel_data_img, chunk_alloc_counter, 1));
         }
     }
 }
@@ -85,8 +84,7 @@ uniform float far;
 
 #include "../../includes/Voxelization.glsl"
 
-layout (r32ui) uniform uimage2D sparse_data_img0;
-layout (r32ui) uniform uimage2D voxel_data_img0;
+layout (r32ui) uniform uimage2D voxel_data_img;
 
 in mat3 tanMat[];
 in vec4 vertexColor[];
@@ -149,15 +147,15 @@ void main() {
     packedVoxelData |= int(round(log2(spriteSize.x))) << VMB_sprite_size_start;
     if (is_sub_voxel(blockID[0])) packedVoxelData |= VBM_AABB_bit;
     
-    uint chunkAddr = imageLoad(sparse_data_img0, get_sparse_chunk_coord(voxelPos)).r & chunk_addr_mask;
+    uint chunkAddr = imageLoad(voxel_data_img, get_sparse_chunk_coord(voxelPos)).r & chunk_addr_mask;
     ivec2 chunkCoord = get_sparse_voxel_coord(chunkAddr, voxelPos, 0);
     
-    imageAtomicMax(voxel_data_img0, chunkCoord, packed_tex_coord);
-    imageAtomicMax(voxel_data_img0, chunkCoord + DATA0, packedVoxelData);
+    imageAtomicMax(voxel_data_img, chunkCoord, packed_tex_coord);
+    imageAtomicMax(voxel_data_img, chunkCoord + DATA0, packedVoxelData);
     
     for (int lod = 1; lod <= 7; ++lod) {
         chunkCoord = get_sparse_voxel_coord(chunkAddr, voxelPos, lod);
-        imageStore(voxel_data_img0, chunkCoord + DATA0, uvec4(1));
+        imageStore(voxel_data_img, chunkCoord + DATA0, uvec4(1));
     }
 }
 
