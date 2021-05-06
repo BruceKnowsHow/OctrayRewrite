@@ -65,7 +65,7 @@ bool is_AABB(uint encoded) {
 const int sparse_chunk_map_size = 512;
 
 const int sparse_voxel_buffer_width = 16384;
-const int sparse_voxel_buffer_height = 16384;
+const int sparse_voxel_buffer_height = 2048;
 const int sparse_voxel_buffer_size = sparse_voxel_buffer_width * sparse_voxel_buffer_height;
 
 const int   const_voxel_radius     = 1024;
@@ -97,7 +97,7 @@ vec3 VoxelToWorldSpace(vec3 position) {
 }
 
 
-const int chunk_addr_buffer_start = sparse_voxel_buffer_size - sparse_chunk_map_size * sparse_chunk_map_size - 4;
+const int chunk_addr_buffer_start = sparse_voxel_buffer_size - sparse_chunk_map_size * sparse_chunk_map_size - 3;
 const ivec2 chunk_alloc_counter = ivec2(sparse_voxel_buffer_width-3, sparse_voxel_buffer_height-1);
 const uint chunk_locked_bit = 1 << 31;
 const uint chunk_addr_mask = ~chunk_locked_bit;
@@ -162,13 +162,13 @@ uint get_sparse_voxel_addr(uint chunk_addr, ivec3 voxelPos, int lod) {
     return chunk_addr * chunk_mem_size + get_sub_chunk_addr(voxelPos, lod);
 }
 
-const uint upper_lod_buffer_end = uint(chunk_addr_buffer_start - 1) - get_lod_base_addr(5);
+const uint upper_lod_buffer_start = uint(chunk_addr_buffer_start - 1) - get_lod_base_addr(5);
 
 ivec2 get_sparse_voxel_coord(uint chunk_addr, ivec3 voxelPos, int lod) {
     uint sparse_voxel_addr;
     
     if (lod > 4) {
-        sparse_voxel_addr = upper_lod_buffer_end - (get_voxel_offset(voxelPos, lod) + get_lod_base_addr(lod));
+        sparse_voxel_addr = upper_lod_buffer_start + get_voxel_offset(voxelPos, lod) + get_lod_base_addr(lod);
     } else {
         sparse_voxel_addr = 2 * get_sparse_voxel_addr(chunk_addr, voxelPos, lod);
     }
@@ -207,6 +207,13 @@ mat3 ArbitraryTBN(vec3 normal) {
 	ret[0] = cross(ret[1], ret[2]);
 	
 	return ret;
+}
+
+ivec2 ScreenToVoxelBuffer(ivec2 screenCoord) {
+    int linearized = (screenCoord.x + screenCoord.y * int(viewSize.x)) * 2;
+    linearized = int(upper_lod_buffer_start - 2) - linearized;
+    
+    return ivec2(linearized % sparse_voxel_buffer_width, linearized / sparse_voxel_buffer_width);
 }
 
 #endif

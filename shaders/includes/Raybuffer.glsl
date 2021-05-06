@@ -139,9 +139,6 @@ void WriteBufferedRay(inout uint index, BufferedRay buf, RayStruct ray) {
 }
 
 // Atomic color write
-#define screen_color_img colorimg2
-layout (r32ui) uniform uimage2D screen_color_img;
-
 uvec2 EncodeColor(vec3 color) {
     color = color * 256;
     color = clamp(color, vec3(0.0), vec3(1 << 15));
@@ -151,10 +148,12 @@ uvec2 EncodeColor(vec3 color) {
 }
 
 void WriteColor(vec3 color, ivec2 screenCoord) {
+    ivec2 coord = ScreenToVoxelBuffer(screenCoord);
+    
     uvec2 enc = EncodeColor(color);
     
-    imageAtomicAdd(screen_color_img, screenCoord * ivec2(2, 1)              , enc.x);
-    imageAtomicAdd(screen_color_img, screenCoord * ivec2(2, 1) + ivec2(1, 0), enc.y);
+    imageAtomicAdd(voxel_data_img, coord              , enc.x);
+    imageAtomicAdd(voxel_data_img, coord + ivec2(1, 0), enc.y);
 }
 
 #endif

@@ -15,6 +15,7 @@ uniform mat4 gbufferProjection;
 uniform vec3 cameraPosition;
 uniform vec3 previousCameraPosition;
 uniform ivec2 atlasSize;
+uniform vec2 viewSize;
 uniform float far;
 uniform float frameTimeCounter;
 
@@ -80,6 +81,7 @@ uniform mat4 gbufferModelViewInverse;
 uniform vec3 cameraPosition;
 uniform vec3 previousCameraPosition;
 uniform ivec2 atlasSize;
+uniform vec2 viewSize;
 uniform float far;
 
 #include "../../includes/Voxelization.glsl"

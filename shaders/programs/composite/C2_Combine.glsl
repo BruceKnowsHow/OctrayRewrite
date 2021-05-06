@@ -12,11 +12,11 @@ uniform bool accum;
 vec2 texcoord = gl_FragCoord.xy / viewSize;
 
 #include "../../includes/Debug.glsl"
+#include "../../includes/Voxelization.glsl"
 
 
 // Atomic color read
-#define screen_color_tex colortex2
-uniform usampler2D screen_color_tex;
+uniform usampler2D voxel_data_tex;
 
 vec3 DecodeColor(uvec2 enc) {
     uvec3 col;
@@ -29,9 +29,12 @@ vec3 DecodeColor(uvec2 enc) {
 }
 
 vec3 ReadColor(ivec2 screenCoord) {
+    ivec2 coord = ScreenToVoxelBuffer(screenCoord);
+    
     uvec2 enc;
-    enc.x = texelFetch(screen_color_tex, screenCoord * ivec2(2,1)              , 0).r;
-    enc.y = texelFetch(screen_color_tex, screenCoord * ivec2(2,1) + ivec2(1, 0), 0).r;
+    
+    enc.x = texelFetch(voxel_data_tex, coord              , 0).r;
+    enc.y = texelFetch(voxel_data_tex, coord + ivec2(1, 0), 0).r;
     
     return DecodeColor(enc);
 }

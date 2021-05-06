@@ -7,10 +7,6 @@ const int colortex1Format = RGBA32F;
 const bool colortex1Clear = true;
 const vec4 colortex1ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 
-const int colortex2Format = R32UI;
-const bool colortex2Clear = true;
-const vec4 colortex2ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
-
 const int colortex9Format = RGBA32F;
 const bool colortex9Clear = false;
 
