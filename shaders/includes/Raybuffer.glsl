@@ -68,10 +68,10 @@ uint GetRayDepth(RayStruct ray) { return ray.info & RAY_DEPTH_MASK; }
 const ivec2 raybufferFront = ivec2(0, 0);
 const ivec2 raybufferBack  = ivec2(1, 0);
 
-int RaybufferReadWarp(ivec2 index) {
-    int first_thread = findLSB(activeThreadsNV());
+uint RaybufferReadWarp(ivec2 index) {
+    uint first_thread = findLSB(uint(activeThreadsNV()));
     
-    int addr = 0;
+    uint addr = 0;
     
     if (gl_ThreadInWarpNV == first_thread) {
         addr = imageLoad(buffer_count_img, index).x;
@@ -80,25 +80,17 @@ int RaybufferReadWarp(ivec2 index) {
     return shuffleNV(addr, first_thread, 32);
 }
 
-int RaybufferIncrement(const ivec2 index) {
-    return imageAtomicAdd(buffer_count_img, index, 1);
-}
-
-int RaybufferDecrement(const ivec2 index) {
-    return imageAtomicAdd(buffer_count_img, index, -1);
-}
-
-int RaybufferIncrementWarp(const ivec2 index) {
-    uint liveMask  = activeThreadsNV();
-    int liveCount = bitCount(liveMask);
+uint RaybufferIncrementWarp(const ivec2 index) {
+    uint liveMask  = uint(activeThreadsNV());
+    uint liveCount = bitCount(liveMask);
     
-    int prefixSum = bitCount(liveMask & ((1 << gl_ThreadInWarpNV) - 1)) - 1;
+    uint prefixSum = bitCount(liveMask & ((1 << gl_ThreadInWarpNV) - 1)) - 1;
     
-    int first_thread = findLSB(liveMask);
+    uint first_thread = findLSB(liveMask);
     
-    int rayAlloc = liveCount;
+    uint rayAlloc = liveCount;
     
-    int addr = 0;
+    uint addr = 0;
     
     if (gl_ThreadInWarpNV == first_thread) {
         addr = imageAtomicAdd(buffer_count_img, index, rayAlloc);
@@ -116,22 +108,22 @@ ivec2 ray_buffer_dims = ivec2(4096, 16384);
 
 const int ray_queue_cap = int(ray_buffer_dims.x * ray_buffer_dims.y);
 
-BufferedRay ReadBufferedRay(int index) {
+BufferedRay ReadBufferedRay(uint index) {
     BufferedRay buf;
     
     index = (index * 4) % ray_queue_cap;
     
-    buf._0 = imageLoad(colorimg2, ivec2( index      % ray_buffer_dims.x, index / ray_buffer_dims.x));
+    buf._0 = imageLoad(colorimg2, ivec2((index    ) % ray_buffer_dims.x, index / ray_buffer_dims.x));
     buf._1 = imageLoad(colorimg2, ivec2((index + 1) % ray_buffer_dims.x, index / ray_buffer_dims.x));
     buf._2 = imageLoad(colorimg2, ivec2((index + 2) % ray_buffer_dims.x, index / ray_buffer_dims.x));
     
     return buf;
 }
 
-void WriteBufferedRay(int index, BufferedRay buf) {
+void WriteBufferedRay(uint index, BufferedRay buf) {
     index = (index * 4) % ray_queue_cap;
     
-    imageStore(colorimg2, ivec2( index      % ray_buffer_dims.x, index / ray_buffer_dims.x), buf._0);
+    imageStore(colorimg2, ivec2((index   )  % ray_buffer_dims.x, index / ray_buffer_dims.x), buf._0);
     imageStore(colorimg2, ivec2((index + 1) % ray_buffer_dims.x, index / ray_buffer_dims.x), buf._1);
     imageStore(colorimg2, ivec2((index + 2) % ray_buffer_dims.x, index / ray_buffer_dims.x), buf._2);
 }
@@ -140,7 +132,7 @@ bool RayIsVisible(RayStruct ray) {
     return ray.absorb.x + ray.absorb.y + ray.absorb.z > 1.0 / 255.0;
 }
 
-void WriteBufferedRay(inout int index, BufferedRay buf, RayStruct ray) {
+void WriteBufferedRay(inout uint index, BufferedRay buf, RayStruct ray) {
     if (!RayIsVisible(ray)) return;
     
     PackBufferedRay(buf, ray);

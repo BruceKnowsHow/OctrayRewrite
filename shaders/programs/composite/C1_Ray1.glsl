@@ -29,7 +29,7 @@ uniform usampler2D sparse_data_tex0;
 
 // Path tracing & ray buffer
 layout (rgba32f) uniform image2D colorimg2;
-layout (r32i) uniform iimage2D colorimg3;
+layout (r32ui) uniform uimage2D colorimg3;
 #include "../../includes/Raybuffer.glsl"
 #include "../../includes/Pathtracing.glsl"
 /**********************************************************************/
@@ -66,8 +66,8 @@ uniform sampler3D sky_tex;
 
 
 void main()  {
-    int qFront = RaybufferReadWarp(raybufferFront);
-    int qBack  = RaybufferReadWarp(raybufferBack);
+    uint qFront = RaybufferReadWarp(raybufferFront);
+    uint qBack  = RaybufferReadWarp(raybufferBack);
     
     int count = 0;
     

@@ -49,7 +49,7 @@ vec3 GetWorldSpacePosition(vec2 coord, float depth) {
 }
 
 layout (rgba32f) uniform image2D colorimg2;
-layout (r32i) uniform iimage2D colorimg3;
+layout (r32ui) uniform uimage2D colorimg3;
 
 #include "../../includes/Raybuffer.glsl"
 #include "../../includes/Pathtracing.glsl"
@@ -123,7 +123,7 @@ void main() {
         
         DoPBR(diffuse, surfaceNormal, flatNormal, tex_s, curr.worldDir, specRay, ambRay, sunRay);
         
-        int i;
+        uint i;
         BufferedRay buf;
         buf._0.xy = vec2(gl_FragCoord.xy);
         WriteBufferedRay(i, buf, specRay);
@@ -136,7 +136,7 @@ void main() {
         curr.absorb    = vec3(1.0);
         curr.info      = 0 | PRIMARY_RAY_TYPE;
         
-        int i;
+        uint i;
         BufferedRay buf;
         buf._0.xy = vec2(gl_FragCoord.xy);
         WriteBufferedRay(i, buf, curr);

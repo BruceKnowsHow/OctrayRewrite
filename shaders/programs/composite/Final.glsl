@@ -15,7 +15,7 @@ const bool colortex2Clear = true;
 const vec4 colortex2ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 
 layout (r32i) uniform uimage2D colorimg3;
-const int colortex3Format = R32I;
+const int colortex3Format = R32UI;
 const bool colortex3Clear = true;
 const vec4 colortex3ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 
@@ -37,7 +37,7 @@ const int colortex12Format = RGB32F;
 
 uniform sampler2D colortex9;
 uniform sampler2D colortex2;
-layout (r32i) uniform iimage2D colorimg3;
+layout (r32ui) uniform uimage2D colorimg3;
 uniform sampler2D colortex8;
 uniform sampler2D colortex5;
 uniform mat4 gbufferModelViewInverse;
