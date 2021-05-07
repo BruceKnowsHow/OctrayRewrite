@@ -86,10 +86,11 @@ void main() {
         curr.voxelPos = voxelPos + flatNormal * exp2(-11);
         curr.voxelPos = texture(colortex12, texcoord).rgb;
         
-        curr.worldDir = worldDir;
-        curr.absorb    = pow(diffuse.rgb, vec3(2.2));
-        curr.absorb    = HSVtoRGB(pow(RGBtoHSV(curr.absorb), vec3(1.0, 1.0, 1.0)));
-        curr.info      = 1;
+        curr.worldDir   = worldDir;
+        curr.absorb     = pow(diffuse.rgb, vec3(2.2));
+        curr.absorb     = HSVtoRGB(pow(RGBtoHSV(curr.absorb), vec3(1.0, 1.0, 1.0)));
+        curr.info       = 1;
+        curr.screenCoord = ivec2(gl_FragCoord.xy);
         
         RayStruct specRay = curr;
         RayStruct  ambRay = curr;
@@ -102,22 +103,19 @@ void main() {
         DoPBR(diffuse, surfaceNormal, flatNormal, tex_s, curr.worldDir, specRay, ambRay, sunRay);
         
         uint i;
-        BufferedRay buf;
-        buf._0.xy = vec2(gl_FragCoord.xy);
-        WriteBufferedRay(i, buf, specRay);
-        WriteBufferedRay(i, buf, ambRay);
-        WriteBufferedRay(i, buf, sunRay);
+        WriteBufferedRay(i, specRay);
+        WriteBufferedRay(i, ambRay);
+        WriteBufferedRay(i, sunRay);
     #else
         RayStruct curr;
         curr.voxelPos = WorldToVoxelSpace(vec3(0.0));
         curr.worldDir = worldDir;
         curr.absorb    = vec3(1.0);
         curr.info      = 0 | PRIMARY_RAY_TYPE;
+        curr.screenCoord = ivec2(gl_FragCoord.xy);
         
         uint i;
-        BufferedRay buf;
-        buf._0.xy = vec2(gl_FragCoord.xy);
-        WriteBufferedRay(i, buf, curr);
+        WriteBufferedRay(i, curr);
     #endif
     
     gl_FragData[0].rgb = color;

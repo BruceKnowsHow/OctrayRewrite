@@ -25,9 +25,12 @@ struct RayStruct {
     vec3 worldDir;
     vec3 absorb;
     uint info;
+    ivec2 screenCoord;
 };
 
-void PackBufferedRay(inout BufferedRay buf, inout RayStruct elem) {
+BufferedRay PackBufferedRay(inout RayStruct elem) {
+    BufferedRay buf;
+    buf._0.xy = intBitsToFloat(elem.screenCoord);
     buf._0.zw = (elem.voxelPos.xy);
     buf._1.x  = (elem.voxelPos.z);
     buf._1.yzw = (elem.worldDir);
@@ -35,10 +38,13 @@ void PackBufferedRay(inout BufferedRay buf, inout RayStruct elem) {
     buf._2.w = uintBitsToFloat(elem.info);
     
     elem.absorb *= 0.0;
+    
+    return buf;
 }
 
 RayStruct UnpackBufferedRay(BufferedRay buf) {
     RayStruct elem;
+    elem.screenCoord = floatBitsToInt(buf._0.xy);
     elem.voxelPos = vec3(buf._0.zw, buf._1.x);
     elem.worldDir = buf._1.yzw;
     elem.absorb = buf._2.xyz;
@@ -132,12 +138,11 @@ bool RayIsVisible(RayStruct ray) {
     return ray.absorb.x + ray.absorb.y + ray.absorb.z > 1.0 / 255.0;
 }
 
-void WriteBufferedRay(inout uint index, BufferedRay buf, RayStruct ray) {
+void WriteBufferedRay(inout uint index, RayStruct ray) {
     if (!RayIsVisible(ray)) return;
     
-    PackBufferedRay(buf, ray);
     index = RaybufferPushWarp();
-    WriteBufferedRay(index, buf);
+    WriteBufferedRay(index, PackBufferedRay(ray));
 }
 
 // Atomic color write

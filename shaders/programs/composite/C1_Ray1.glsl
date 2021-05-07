@@ -49,26 +49,21 @@ void main()  {
     
     int count = 0;
     
-    BufferedRay buf;
+    RayStruct curr;
     bool fetch = true;
     while (queue_size > 0 && queue_size < ray_queue_cap && count++ < 128) {
         if (fetch) {
             qFront = RaybufferPopWarp();
-            buf = ReadBufferedRay(qFront);
+            curr = UnpackBufferedRay(ReadBufferedRay(qFront));
         }
         
         fetch = true;
         
-        ivec2 screenCoord = ivec2(buf._0.xy);
-        
-        // screenCoord = UnpackCoord(buf._0.x);
         // 0.0 is the clear value for the ray buffer.
         // Some fake (0, 0) rays are picked up by threads when the buffer is nearly empty.
         // These threads will do costly atomic operations on the same pixel,
         // and VoxelIntersect() on undefined data.
-        if (screenCoord.x == 0 && screenCoord.y == 0) continue;
-        
-        RayStruct curr = UnpackBufferedRay(buf);
+        if (curr.screenCoord.x == 0 && curr.screenCoord.y == 0) continue;
         
         VoxelIntersectOut VIO = VoxelIntersect(curr.voxelPos, curr.worldDir);
         
@@ -81,7 +76,7 @@ void main()  {
                 color += ComputeTotalSky(VoxelToWorldSpace(VIO.voxelPos), curr.worldDir, curr.absorb, false) * 0.2 / (IsPrimaryRay(curr) ? 4.0 : 1.0);
             
             if (!(IsSunlightRay(curr) && VIO.hit))
-                WriteColor(color, screenCoord);
+                WriteColor(color, curr.screenCoord);
             
             continue;
         }
@@ -165,16 +160,19 @@ void main()  {
         fetch = false;
         
         if (RayIsVisible(specRay)) {
-            PackBufferedRay(buf, specRay);
+            curr = specRay;
+            specRay.absorb *= 0.0;
         } else if (RayIsVisible(ambRay)) {
-            PackBufferedRay(buf, ambRay);
+            curr = ambRay;
+            ambRay.absorb *= 0.0;
         } else if (RayIsVisible(sunRay)) {
-            PackBufferedRay(buf, sunRay);
+            curr = sunRay;
+            sunRay.absorb *= 0.0;
         }
         
-        WriteBufferedRay(qBack, buf, specRay);
-        WriteBufferedRay(qBack, buf, ambRay);
-        WriteBufferedRay(qBack, buf, sunRay);
+        WriteBufferedRay(qBack, specRay);
+        WriteBufferedRay(qBack, ambRay);
+        WriteBufferedRay(qBack, sunRay);
         
         queue_size = int(qBack) - int(qFront);
     }
