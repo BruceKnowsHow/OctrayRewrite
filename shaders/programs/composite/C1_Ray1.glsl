@@ -49,10 +49,15 @@ void main()  {
     
     int count = 0;
     
+    BufferedRay buf;
+    bool fetch = true;
     while (queue_size > 0 && queue_size < ray_queue_cap && count++ < 128) {
-        qFront = RaybufferPopWarp();
+        if (fetch) {
+            qFront = RaybufferPopWarp();
+            buf = ReadBufferedRay(qFront);
+        }
         
-        BufferedRay buf = ReadBufferedRay(qFront);
+        fetch = true;
         
         ivec2 screenCoord = ivec2(buf._0.xy);
         
@@ -151,6 +156,21 @@ void main()  {
         DoPBR(diffuse, surfaceNormal, tanMat[2], tex_s, curr.worldDir, specRay, ambRay, sunRay);
         
         if ((info & AMBIENT_RAY_TYPE) != 0) sunRay.absorb *= 4;
+        
+        uint rayCount = uint(RayIsVisible(specRay)) + uint(RayIsVisible(ambRay)) + uint(RayIsVisible(sunRay));
+        
+        if (rayCount == 0)
+            continue;
+        
+        fetch = false;
+        
+        if (RayIsVisible(specRay)) {
+            PackBufferedRay(buf, specRay);
+        } else if (RayIsVisible(ambRay)) {
+            PackBufferedRay(buf, ambRay);
+        } else if (RayIsVisible(sunRay)) {
+            PackBufferedRay(buf, sunRay);
+        }
         
         WriteBufferedRay(qBack, buf, specRay);
         WriteBufferedRay(qBack, buf, ambRay);

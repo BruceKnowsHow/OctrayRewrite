@@ -27,12 +27,14 @@ struct RayStruct {
     uint info;
 };
 
-void PackBufferedRay(inout BufferedRay buf, RayStruct elem) {
+void PackBufferedRay(inout BufferedRay buf, inout RayStruct elem) {
     buf._0.zw = (elem.voxelPos.xy);
     buf._1.x  = (elem.voxelPos.z);
     buf._1.yzw = (elem.worldDir);
     buf._2.xyz = (elem.absorb);
     buf._2.w = uintBitsToFloat(elem.info);
+    
+    elem.absorb *= 0.0;
 }
 
 RayStruct UnpackBufferedRay(BufferedRay buf) {
