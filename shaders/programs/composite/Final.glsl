@@ -10,11 +10,8 @@ const vec4 colortex1ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 const int colortex9Format = RGBA32F;
 const bool colortex9Clear = false;
 
-const int colortex6Format = RGBA8;
-const int colortex7Format = RGB16F;
-const int colortex8Format = RGBA8;
-const int colortex10Format = RGB16F;
-const int colortex12Format = RGB32F;
+const int colortex6Format = RGB32F;
+const int colortex7Format = RGB32F;
 */
 
 uniform sampler2D colortex9;

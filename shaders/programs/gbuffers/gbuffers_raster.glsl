@@ -26,6 +26,7 @@ layout (r32ui) uniform uimage2D voxel_data_img;
 out mat3 tanMat;
 out vec4 vertexColor;
 out vec3 worldPos;
+out vec3 viewPos;
 out vec3 voxelPos;
 flat out vec2 midTexcoord;
 out vec2 texcoord;
@@ -52,8 +53,11 @@ void main() {
     
     worldPos    = (gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex).xyz;
     voxelPos    = WorldToVoxelSpace(worldPos) + tanMat[2] * exp2(-11);
+    viewPos     = (gbufferModelView * vec4(worldPos, 1.0)).xyz;
     
-    gl_Position = gbufferProjection * gbufferModelView * vec4(worldPos, 1.0);
+    gl_Position = gbufferProjection * vec4(viewPos, 1.0);
+    
+    viewPos     = (gbufferModelView * vec4(worldPos + tanMat[2]*exp2(-11), 1.0)).xyz;
     
     vec2 texDirection = sign(texcoord - mc_midTexCoord)*vec2(1,sign(at_tangent.w));
     vec3 triCentroid = worldPos.xyz - (tanMat * vec3(texDirection,0.5));
@@ -91,6 +95,7 @@ layout (r32ui) uniform uimage2D voxel_data_img;
 in mat3 tanMat[];
 in vec4 vertexColor[];
 in vec3 worldPos[];
+in vec3 viewPos[];
 in vec3 voxelPos[];
 flat in vec2 midTexcoord[];
 in vec2 texcoord[];
@@ -99,6 +104,7 @@ flat in int blockID[];
 out mat3 _tanMat;
 out vec4 _vertexColor;
 out vec3 _worldPos;
+out vec3 _viewPos;
 out vec3 _voxelPos;
 out vec2 _texcoord;
 
@@ -108,6 +114,7 @@ void main() {
         _tanMat = tanMat[i];
         _vertexColor = vertexColor[i];
         _worldPos = worldPos[i];
+        _viewPos  = viewPos[i];
         _voxelPos = voxelPos[i];
         _texcoord = texcoord[i];
         EmitVertex();
@@ -174,10 +181,22 @@ uniform sampler2D specular;
 in mat3 _tanMat;
 in vec4 _vertexColor;
 in vec3 _worldPos;
+in vec3 _viewPos;
 in vec3 _voxelPos;
 in vec2 _texcoord;
 
-/* RENDERTARGETS:6,7,8,10,12 */
+/* RENDERTARGETS:6,7 */
+
+float EncodeNormal(vec3 normal) {
+    const float bits = 11.0;
+    
+	normal    = clamp(normal, -1.0, 1.0);
+	normal.xy = vec2(atan(normal.x, normal.z), acos(normal.y)) / 3.14159;
+	normal.x += 1.0;
+	normal.xy = round(normal.xy * exp2(bits));
+	
+	return normal.x + normal.y * exp2(bits + 2.0);
+}
 
 void main() {
     vec4 diffuse = texture(tex, _texcoord);
@@ -198,11 +217,8 @@ void main() {
     
     vec3 surfaceNormal = _tanMat * normal;
     
-    gl_FragData[0] = diffuse;
-    gl_FragData[1].rgb = surfaceNormal;
-    gl_FragData[2] = texture(specular, _texcoord);
-    gl_FragData[3].rgb = _tanMat[2];
-    gl_FragData[4].rgb = _voxelPos;
+    gl_FragData[0].rgb = vec3(uintBitsToFloat(packUnorm4x8(diffuse * 255.0 / 256.0)), EncodeNormal(surfaceNormal), uintBitsToFloat(packUnorm4x8(texture(specular, _texcoord) * 255.0 / 256.0)));
+    gl_FragData[1].rgb = _voxelPos + _tanMat[2] * exp2(-11);
 }
 
 #endif

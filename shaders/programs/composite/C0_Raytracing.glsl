@@ -1,9 +1,6 @@
 uniform sampler2D depthtex0;
 uniform sampler2D colortex6;
 uniform sampler2D colortex7;
-uniform sampler2D colortex8;
-uniform sampler2D colortex10;
-uniform sampler2D colortex12;
 
 uniform sampler2D noisetex;
 
@@ -53,6 +50,22 @@ vec3 GetWorldSpacePosition(vec2 coord, float depth) {
 
 /**********************************************************************/
 
+vec3 DecodeNormal(float enc) {
+    const float bits = 11.0;
+    
+	vec4 normal;
+	
+	normal.y    = exp2(bits + 2.0) * floor(enc / exp2(bits + 2.0));
+	normal.x    = enc - normal.y;
+	normal.xy  /= exp2(vec2(bits, bits * 2.0 + 2.0));
+	normal.x   -= 1.0;
+	normal.xy  *= 3.14159;
+	normal.xwzy = vec4(sin(normal.xy), cos(normal.xy));
+	normal.xz  *= normal.w;
+	
+	return normal.xyz;
+}
+
 /* DRAWBUFFERS:8 */
 
 void main() {
@@ -72,19 +85,18 @@ void main() {
     
     // if (all(equal(ivec2(gl_FragCoord.xy), ivec2(0, 0)))) { gl_FragData[0] = vec4(0); exit(); return; }
     
-    vec4 diffuse = texture(colortex6, texcoord);
-    
-    vec3 surfaceNormal = texture(colortex7, texcoord).rgb;
-    vec4 tex_s = texture(colortex8, texcoord);
-    vec3 flatNormal = texture(colortex10, texcoord).rgb;
-    
     vec3 color = vec3(0.0);
     
     #define RASTER_ENGINE
     #ifdef RASTER_ENGINE
+        vec3 gbufferEncode = texture(colortex6, texcoord).rgb;
+        
+        vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)) * 256.0 / 255.0;
+        vec3 surfaceNormal = DecodeNormal(gbufferEncode.g);
+        vec4 tex_s = unpackUnorm4x8(floatBitsToUint(gbufferEncode.b)) * 256.0 / 255.0;
+        
         RayStruct curr;
-        curr.voxelPos = voxelPos + flatNormal * exp2(-11);
-        curr.voxelPos = texture(colortex12, texcoord).rgb;
+        curr.voxelPos = texture(colortex7, texcoord).rgb;
         
         curr.worldDir   = worldDir;
         curr.absorb     = pow(diffuse.rgb, vec3(2.2));
@@ -100,7 +112,7 @@ void main() {
         ambRay.info  |= AMBIENT_RAY_TYPE;
         sunRay.info  |= SUNLIGHT_RAY_TYPE;
         
-        DoPBR(diffuse, surfaceNormal, flatNormal, tex_s, curr.worldDir, specRay, ambRay, sunRay);
+        DoPBR(diffuse, surfaceNormal, surfaceNormal, tex_s, curr.worldDir, specRay, ambRay, sunRay);
         
         uint i;
         WriteBufferedRay(i, specRay);

@@ -51,7 +51,7 @@ void main()  {
     
     RayStruct curr;
     bool fetch = true;
-    while (queue_size > 0 && queue_size < ray_queue_cap && count++ < 128) {
+    while (queue_size > 0 && queue_size < ray_queue_cap && count++ < 1024) {
         if (fetch) {
             qFront = RaybufferPopWarp();
             curr = UnpackBufferedRay(ReadBufferedRay(qFront));
