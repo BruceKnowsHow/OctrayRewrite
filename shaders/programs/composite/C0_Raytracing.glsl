@@ -1,3 +1,6 @@
+layout (local_size_x = 32, local_size_y = 32) in;
+const vec2 workGroupsRender = vec2(1.0, 1.0);
+
 uniform sampler2D depthtex0;
 uniform sampler2D colortex6;
 uniform sampler2D colortex7;
@@ -14,9 +17,7 @@ uniform float frameTimeCounter;
 uniform float far;
 uniform int frameCounter;
 
-vec2 texcoord = gl_FragCoord.xy / viewSize;
-
-#include "../../includes/Debug.glsl"
+vec2 texcoord = gl_GlobalInvocationID.xy / viewSize;
 
 #define sky_tex colortex11
 uniform sampler3D sky_tex;
@@ -31,7 +32,7 @@ uniform  sampler2D atlas_tex      ;
 uniform  sampler2D atlas_tex_n    ;
 uniform  sampler2D atlas_tex_s    ;
 
-#define RAND_SEED uint(uint(gl_FragCoord.x * gl_FragCoord.y) + uint(viewSize.x * viewSize.y) * frameCounter)
+#define RAND_SEED uint(uint(gl_GlobalInvocationID.x * gl_GlobalInvocationID.y) + uint(viewSize.x * viewSize.y) * frameCounter)
 #include "../../includes/Random.glsl"
 
 vec3 GetWorldSpacePosition(vec2 coord, float depth) {
@@ -66,10 +67,8 @@ vec3 DecodeNormal(float enc) {
 	return normal.xyz;
 }
 
-/* DRAWBUFFERS:8 */
-
 void main() {
-    float depth0 = texture(depthtex0, texcoord).x;
+    float depth0 = texelFetch(depthtex0, ivec2(gl_GlobalInvocationID.xy), 0).x;
     
     vec3 worldPos = GetWorldSpacePosition(texcoord, depth0);
     vec3 worldDir = normalize(worldPos);
@@ -78,31 +77,28 @@ void main() {
     vec3 absorb = vec3(1.0);
     if (depth0 >= 1.0) {
         vec3 color = ComputeTotalSky(vec3(0.0), worldDir, absorb, true);
-        WriteColor(color / 4.0, ivec2(gl_FragCoord.xy));
-        exit();
+        WriteColor(color / 4.0, ivec2(gl_GlobalInvocationID.xy));
         return;
     }
-    
-    // if (all(equal(ivec2(gl_FragCoord.xy), ivec2(0, 0)))) { gl_FragData[0] = vec4(0); exit(); return; }
     
     vec3 color = vec3(0.0);
     
     #define RASTER_ENGINE
     #ifdef RASTER_ENGINE
-        vec3 gbufferEncode = texture(colortex6, texcoord).rgb;
+        vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_GlobalInvocationID.xy), 0).rgb;
         
         vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)) * 256.0 / 255.0;
         vec3 surfaceNormal = DecodeNormal(gbufferEncode.g);
         vec4 tex_s = unpackUnorm4x8(floatBitsToUint(gbufferEncode.b)) * 256.0 / 255.0;
         
         RayStruct curr;
-        curr.voxelPos = texture(colortex7, texcoord).rgb;
+        curr.voxelPos = texelFetch(colortex7, ivec2(gl_GlobalInvocationID.xy), 0).rgb;
         
         curr.worldDir   = worldDir;
         curr.absorb     = pow(diffuse.rgb, vec3(2.2));
         curr.absorb     = HSVtoRGB(pow(RGBtoHSV(curr.absorb), vec3(1.0, 1.0, 1.0)));
         curr.info       = 1;
-        curr.screenCoord = ivec2(gl_FragCoord.xy);
+        curr.screenCoord = ivec2(gl_GlobalInvocationID.xy);
         
         RayStruct specRay = curr;
         RayStruct  ambRay = curr;
@@ -124,13 +120,9 @@ void main() {
         curr.worldDir = worldDir;
         curr.absorb    = vec3(1.0);
         curr.info      = 0 | PRIMARY_RAY_TYPE;
-        curr.screenCoord = ivec2(gl_FragCoord.xy);
+        curr.screenCoord = ivec2(gl_GlobalInvocationID.xy);
         
         uint i;
         WriteBufferedRay(i, curr);
     #endif
-    
-    gl_FragData[0].rgb = color;
-    
-    exit();
 }
