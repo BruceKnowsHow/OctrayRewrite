@@ -41,4 +41,20 @@ void DoPBR(vec4 diffuse, vec3 surfaceNormal, vec3 flatNormal, vec4 tex_s, vec3 w
     sunRay.worldDir = normalize(ArbitraryTBN(sunDirection)*CalculateConeVector(RandNextF(), radians(1.0), 32));
     sunRay.absorb *= max(0.0, dot(sunRay.worldDir, surfaceNormal)) * mix(vec3(1.0), kD, isMetal);
     sunRay.absorb *= float(dot(sunRay.worldDir, flatNormal) > 0.0);
+    
+    #define AMBIENT_RAYS
+    #define SPECULAR_RAYS
+    #define SUNLIGHT_RAYS
+    
+    #ifndef AMBIENT_RAYS
+        ambRay.absorb *= 0.0;
+    #endif
+    
+    #ifndef SPECULAR_RAYS
+        specRay.absorb *= 0.0;
+    #endif
+    
+    #ifndef SUNLIGHT_RAYS
+        sunRay.absorb *= 0.0;
+    #endif
 }

@@ -81,7 +81,9 @@ void main()  {
             continue;
         }
         
-        if (GetRayDepth(curr) >= 3)
+        #define MAX_LIGHT_BOUNCES 3 // [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 256]
+        
+        if (GetRayDepth(curr) >= MAX_LIGHT_BOUNCES)
             continue;
         
         uint packedVoxelData = texelFetch(voxel_data_tex, VIO.voxel_coord + DATA0, 0).r;
