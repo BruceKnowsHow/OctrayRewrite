@@ -161,7 +161,7 @@ void main() {
     imageAtomicMax(voxel_data_img, chunkCoord, packed_tex_coord);
     imageAtomicMax(voxel_data_img, chunkCoord + DATA0, packedVoxelData);
     
-    for (int lod = 1; lod <= 7; ++lod) {
+    for (int lod = 1; lod <= 4; ++lod) {
         chunkCoord = get_sparse_voxel_coord(chunkAddr, voxelPos, lod);
         imageStore(voxel_data_img, chunkCoord + DATA0, uvec4(1));
     }

@@ -168,9 +168,10 @@ ivec2 get_sparse_voxel_coord(uint chunk_addr, ivec3 voxelPos, int lod) {
     uint sparse_voxel_addr;
     
     if (lod > 4) {
-        sparse_voxel_addr = upper_lod_buffer_start + get_voxel_offset(voxelPos, lod) + get_lod_base_addr(lod);
+        // sparse_voxel_addr = upper_lod_buffer_start + get_voxel_offset(voxelPos, lod) * 2 + get_lod_base_addr(lod);
+        sparse_voxel_addr = (get_voxel_offset(voxelPos, lod) + get_lod_base_addr(lod) - get_lod_base_addr(5));
     } else {
-        sparse_voxel_addr = 2 * get_sparse_voxel_addr(chunk_addr, voxelPos, lod);
+        sparse_voxel_addr = 2 * get_sparse_voxel_addr(chunk_addr, voxelPos, lod) + get_lod_base_addr(8) - get_lod_base_addr(5);
     }
     
     return ivec2(sparse_voxel_addr % sparse_voxel_buffer_width, sparse_voxel_addr / sparse_voxel_buffer_width);

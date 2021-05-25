@@ -245,7 +245,7 @@ VoxelIntersectOut VoxelIntersect(vec3 voxelPos, vec3 worldDir) {
         
         int oldPos = GetMinComp(uvPos, uplane);
         lod += int((newPos.z >> (lod+1)) != (oldPos >> (lod+1)));
-        lod = min(lod, 7);
+        lod = min(lod, 4);
         uvPos = UnsortMinComp(newPos, uplane);
         chunk_addr = texelFetch(voxel_data_tex, get_sparse_chunk_coord(uvPos), 0).r;
         voxel_coord = get_sparse_voxel_coord(chunk_addr & chunk_addr_mask, uvPos, lod);

@@ -12,7 +12,6 @@ uniform int frameCounter;
 
 #include "../../includes/Debug.glsl"
 
-
 // Voxelization and voxel intersection
 #include "../../includes/Voxelization.glsl"
 #include "../../BlockMappings.glsl"
@@ -40,7 +39,6 @@ uniform sampler2D noisetex;
 uniform sampler3D sky_tex;
 #include "../../includes/Sky.glsl"
 /**********************************************************************/
-
 
 void main()  {
     uint qFront = RaybufferReadWarp(raybuffer_front);
@@ -81,7 +79,7 @@ void main()  {
             continue;
         }
         
-        #define MAX_LIGHT_BOUNCES 3 // [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 256]
+        #define MAX_LIGHT_BOUNCES 3 // [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 256]
         
         if (GetRayDepth(curr) >= MAX_LIGHT_BOUNCES)
             continue;

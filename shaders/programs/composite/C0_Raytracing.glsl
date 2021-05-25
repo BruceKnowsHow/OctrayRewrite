@@ -19,6 +19,8 @@ uniform int frameCounter;
 
 vec2 texcoord = gl_GlobalInvocationID.xy / viewSize;
 
+#include "../../includes/Debug.glsl"
+
 #define sky_tex colortex11
 uniform sampler3D sky_tex;
 #include "../../includes/Sky.glsl"
@@ -81,6 +83,7 @@ void main() {
         if (depth0 >= 1.0) {
             vec3 color = ComputeTotalSky(vec3(0.0), worldDir, absorb, true);
             WriteColor(color / 4.0, ivec2(gl_GlobalInvocationID.xy));
+            exit(ivec2(gl_GlobalInvocationID.xy));
             return;
         }
         
@@ -124,4 +127,6 @@ void main() {
         uint i;
         WriteBufferedRay(i, curr);
     #endif
+    
+    exit(ivec2(gl_GlobalInvocationID.xy));
 }
