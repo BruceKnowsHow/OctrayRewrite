@@ -75,16 +75,15 @@ void main() {
     vec3 voxelPos = WorldToVoxelSpace(worldPos);
     
     vec3 absorb = vec3(1.0);
-    if (depth0 >= 1.0) {
-        vec3 color = ComputeTotalSky(vec3(0.0), worldDir, absorb, true);
-        WriteColor(color / 4.0, ivec2(gl_GlobalInvocationID.xy));
-        return;
-    }
-    
-    vec3 color = vec3(0.0);
     
     #define RASTER_ENGINE
     #ifdef RASTER_ENGINE
+        if (depth0 >= 1.0) {
+            vec3 color = ComputeTotalSky(vec3(0.0), worldDir, absorb, true);
+            WriteColor(color / 4.0, ivec2(gl_GlobalInvocationID.xy));
+            return;
+        }
+        
         vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_GlobalInvocationID.xy), 0).rgb;
         
         vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)) * 256.0 / 255.0;

@@ -67,9 +67,9 @@ void main()  {
         
         VoxelIntersectOut VIO = VoxelIntersect(curr.voxelPos, curr.worldDir);
         
-        vec3 color = vec3(0.0);
-        
         if (!VIO.hit || IsSunlightRay(curr)) {
+            vec3 color = vec3(0.0);
+            
             if (IsSunlightRay(curr))
                 color += curr.absorb * vec3(1.0) * GetSunIrradiance(kPoint(VoxelToWorldSpace(VIO.voxelPos)), sunDirection);
             else

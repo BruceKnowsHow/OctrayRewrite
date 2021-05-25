@@ -66,7 +66,6 @@ void main() {
     
     if ((imageLoad(voxel_data_img, CC).r & chunk_locked_bit) == 0) {
         if ((imageAtomicOr(voxel_data_img, CC, chunk_locked_bit) & chunk_locked_bit) == 0) {
-            
             imageAtomicOr(voxel_data_img, CC, imageAtomicAdd(voxel_data_img, chunk_alloc_counter, 1));
         }
     }
