@@ -7,6 +7,14 @@ const int colortex1Format = RGBA32F;
 const bool colortex1Clear = true;
 const vec4 colortex1ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 
+const int colortex2Format = R32UI;
+const bool colortex2Clear = false;
+const vec4 colortex2ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
+
+const int colortex5Format = RGBA8;
+const bool colortex5Clear = true;
+const vec4 colortex5ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
+
 const int colortex6Format = RGB32F;
 const int colortex7Format = RGB32F;
 
@@ -15,6 +23,8 @@ const int colortex9Format = RGBA32F;
 const bool colortex8Clear = false;
 const bool colortex9Clear = false;
 */
+
+layout (r32ui) uniform uimage2D colorimg2;
 
 uniform sampler2D colortex9;
 uniform sampler2D colortex8;
@@ -63,7 +73,11 @@ void main() {
     
     gl_FragColor.rgb = color.rgb;
     
+    if (int(gl_FragCoord.x) == 0 && int(gl_FragCoord.y) == 0)
+        imageStore(colorimg2, ivec2(4095), uvec4(1));
+    
     #ifdef DEBUG
-    gl_FragColor.rgb = texelFetch(colortex5, ivec2(texcoord * viewSize), 0).rgb;
+    gl_FragColor.rgb = imageLoad(colorimg5, ivec2(texcoord * viewSize)).rgb;
+    // gl_FragColor.rgb = texelFetch(colortex5, ivec2(texcoord * viewSize), 0).rgb;
     #endif
 }

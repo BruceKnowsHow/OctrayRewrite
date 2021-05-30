@@ -29,6 +29,7 @@ out vec3 worldPos;
 out vec3 viewPos;
 out vec3 voxelPos;
 flat out vec2 midTexcoord;
+flat out vec2 cornerTexcoord;
 out vec2 texcoord;
 flat out int blockID;
 
@@ -45,11 +46,12 @@ mat3 GetTangentMat() {
 }
 
 void main() {
-    vertexColor = gl_Color;
-    texcoord    = gl_MultiTexCoord0.xy;
-    tanMat      = GetTangentMat();
-    blockID     = backport_id(int(mc_Entity.x)) % 256;
-    midTexcoord = mc_midTexCoord;
+    vertexColor    = gl_Color;
+    texcoord       = gl_MultiTexCoord0.xy;
+    tanMat         = GetTangentMat();
+    blockID        = backport_id(int(mc_Entity.x)) % 256;
+    midTexcoord    = mc_midTexCoord;
+    cornerTexcoord = mc_midTexCoord.xy - abs(mc_midTexCoord.xy - texcoord);
     
     worldPos    = (gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex).xyz;
     voxelPos    = WorldToVoxelSpace(worldPos) + tanMat[2] * exp2(-11);
@@ -57,7 +59,7 @@ void main() {
     
     gl_Position = gbufferProjection * vec4(viewPos, 1.0);
     
-    viewPos     = (gbufferModelView * vec4(worldPos + tanMat[2]*exp2(-11), 1.0)).xyz;
+    viewPos     = (mat3(gbufferModelViewInverse) * (gl_ModelViewMatrix * gl_Vertex).xyz);
     
     vec2 texDirection = sign(texcoord - mc_midTexCoord)*vec2(1,sign(at_tangent.w));
     vec3 triCentroid = worldPos.xyz - (tanMat * vec3(texDirection,0.5));
@@ -97,6 +99,7 @@ in vec3 worldPos[];
 in vec3 viewPos[];
 in vec3 voxelPos[];
 flat in vec2 midTexcoord[];
+flat in vec2 cornerTexcoord[];
 in vec2 texcoord[];
 flat in int blockID[];
 
@@ -106,8 +109,12 @@ out vec3 _worldPos;
 out vec3 _viewPos;
 out vec3 _voxelPos;
 out vec2 _texcoord;
+flat out vec2 _cornerTexcoord;
+flat out vec2 _spriteSize;
 
 void main() {
+    _spriteSize = abs(midTexcoord[0] - texcoord[0]) * 2.0 * atlasSize;
+    
     for (int i = 0; i < 3; ++i) {
         gl_Position = gl_in[i].gl_Position;
         _tanMat = tanMat[i];
@@ -116,6 +123,7 @@ void main() {
         _viewPos  = viewPos[i];
         _voxelPos = voxelPos[i];
         _texcoord = texcoord[i];
+        _cornerTexcoord = cornerTexcoord[i];
         EmitVertex();
     }
     
@@ -143,16 +151,14 @@ void main() {
     ivec3 voxelPos = ivec3(WorldToVoxelSpace(triCentroid));
     
     // Store all of its data into the sparse texture
-    vec2 cornerTexcoord   = midTexcoord[0] - abs(midTexcoord[0] - texcoord[0]);
-    vec2 spriteSize       = abs(midTexcoord[0] - texcoord[0]) * 2.0 * atlasSize;
-    uint packed_tex_coord = packUnorm2x16(cornerTexcoord);
+    uint packed_tex_coord = packUnorm2x16(cornerTexcoord[0]);
     
     vec2 hueSat           = RGBtoHSV(vertexColor[0].rgb).rg;
     uint packedVoxelData = 0;
     packedVoxelData |= blockID[0];
     packedVoxelData |= int(clamp(hueSat.r, 0.0, 1.0) * 255.0) << VMB_hue_start;
     packedVoxelData |= int(clamp(hueSat.g, 0.0, 1.0) * 255.0) << VMB_sat_start;
-    packedVoxelData |= int(round(log2(spriteSize.x))) << VMB_sprite_size_start;
+    packedVoxelData |= int(round(log2(_spriteSize.x))) << VMB_sprite_size_start;
     if (is_sub_voxel(blockID[0])) packedVoxelData |= VBM_AABB_bit;
     
     uint chunkAddr = imageLoad(voxel_data_img, get_sparse_chunk_coord(voxelPos)).r & chunk_addr_mask;
@@ -177,14 +183,18 @@ uniform sampler2D tex;
 uniform sampler2D normals;
 uniform sampler2D specular;
 
+uniform ivec2 atlasSize;
+
 in mat3 _tanMat;
 in vec4 _vertexColor;
 in vec3 _worldPos;
 in vec3 _viewPos;
 in vec3 _voxelPos;
 in vec2 _texcoord;
+flat in vec2 _cornerTexcoord;
+flat in vec2 _spriteSize;
 
-/* RENDERTARGETS:6,7 */
+#include "../../includes/Debug.glsl"
 
 float EncodeNormal(vec3 normal) {
     const float bits = 11.0;
@@ -197,17 +207,33 @@ float EncodeNormal(vec3 normal) {
 	return normal.x + normal.y * exp2(bits + 2.0);
 }
 
+#include "../../includes/Parallax.glsl"
+
+/* RENDERTARGETS:6,7 */
+
 void main() {
-    vec4 diffuse = texture(tex, _texcoord);
+    vec3 plane = vec3(0,0,1);
+    ivec2 corner = ivec2(_cornerTexcoord*atlasSize);
+    float LOD = max(0.0, textureQueryLod(tex, _texcoord).y)*0;
+    vec3 tangent_pos = vec3((_texcoord - _cornerTexcoord)*atlasSize, 1.0);
+    vec3 tangent_ray = normalize(_viewPos*_tanMat);
+    
+    ivec2 spriteSize = ivec2(_spriteSize);
+    
+    ivec2 pCoord = Parallax(corner, tangent_pos, tangent_ray, spriteSize, plane, int(LOD));
+    
+    vec2 tCoord = _texcoord;
+    // vec2 tCoord = vec2(pCoord)/atlasSize;
+    
+    vec4 diffuse = textureLod(tex, tCoord, LOD);
     
     if (diffuse.a < 0.1) {
         discard;
     }
     
-    // diffuse.rgb *= _vertexColor.rgb * _vertexColor.a;
     diffuse.rgb *= pow(_vertexColor.rgb, vec3(1.0 / 2.2));
     
-    vec4 tex_n = texture(normals, _texcoord);
+    vec4 tex_n = texture(normals, tCoord);
     
     vec3 normal;
     normal.xy = tex_n.xy * 2.0 - 1.0;
@@ -216,8 +242,10 @@ void main() {
     
     vec3 surfaceNormal = _tanMat * normal;
     
-    gl_FragData[0].rgb = vec3(uintBitsToFloat(packUnorm4x8(diffuse * 255.0 / 256.0)), EncodeNormal(surfaceNormal), uintBitsToFloat(packUnorm4x8(texture(specular, _texcoord) * 255.0 / 256.0)));
+    gl_FragData[0].rgb = vec3(uintBitsToFloat(packUnorm4x8(diffuse * 255.0 / 256.0)), EncodeNormal(surfaceNormal), uintBitsToFloat(packUnorm4x8(texture(specular, tCoord) * 255.0 / 256.0)));
     gl_FragData[1].rgb = _voxelPos + _tanMat[2] * exp2(-11);
+    
+    // exit();
 }
 
 #endif
