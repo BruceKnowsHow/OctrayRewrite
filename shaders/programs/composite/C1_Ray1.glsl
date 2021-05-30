@@ -154,20 +154,26 @@ void main()  {
         
         uint rayCount = uint(RayIsVisible(specRay)) + uint(RayIsVisible(ambRay)) + uint(RayIsVisible(sunRay));
         
-        if (rayCount == 0)
-            continue;
-        
-        fetch = false;
-        
-        if (RayIsVisible(specRay)) {
-            curr = specRay;
-            specRay.absorb *= 0.0;
-        } else if (RayIsVisible(ambRay)) {
-            curr = ambRay;
-            ambRay.absorb *= 0.0;
-        } else if (RayIsVisible(sunRay)) {
-            curr = sunRay;
-            sunRay.absorb *= 0.0;
+        if (allThreadsNV(rayCount != 0)) {
+            // Local ray re-use keeps one of the thread's rays around
+            // to avoid needing to fetch it from global memory.
+            // Only active if all the threads can participate,
+            // otherwise this optimization will add overhead that doesn't
+            // save anything since some of the threads still need to go to
+            // global memory.
+            
+            fetch = false;
+            
+            if (RayIsVisible(specRay)) {
+                curr = specRay;
+                specRay.absorb *= 0.0;
+            } else if (RayIsVisible(ambRay)) {
+                curr = ambRay;
+                ambRay.absorb *= 0.0;
+            } else if (RayIsVisible(sunRay)) {
+                curr = sunRay;
+                sunRay.absorb *= 0.0;
+            }
         }
         
         WriteBufferedRay(qBack, specRay);
