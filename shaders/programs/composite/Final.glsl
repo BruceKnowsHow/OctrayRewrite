@@ -19,6 +19,8 @@ const bool colortex9Clear = false;
 uniform sampler2D colortex9;
 uniform sampler2D colortex8;
 uniform sampler2D colortex5;
+uniform sampler2D colortex6;
+uniform sampler2D depthtex0;
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferModelView;
 uniform vec3 cameraPosition;
@@ -35,9 +37,17 @@ vec2 texcoord = gl_FragCoord.xy / viewSize * MC_RENDER_QUALITY;
 void main() {
     vec3 avgCol = textureLod(colortex9, vec2(0.5), 16).rgb / textureLod(colortex9, vec2(0.5), 16).a;
     // float expo = pow(1.0 / dot(avgCol, vec3(3.0)), 0.7);
-    float expo = pow(1.0 / dot(avgCol, vec3(1.0)), 0.5);
+    float expo = pow(1.0 / dot(avgCol, vec3(1.0)), 1.0);
     
     vec4 color = texture(colortex9, texcoord);
+    
+    if (texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).x < 1.0) {
+        vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
+        vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)) * 256.0 / 255.0;
+        diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
+        color.rgb *= max(diffuse.rgb, vec3(0.001));
+    }
+    
     color.rgb /= color.a;
     color.rgb *= min(expo, 1000.0) * 2.0;
     vec3 sceneLDR = ACES_AP1_SRGB_RRT(color.rgb);
@@ -49,7 +59,7 @@ void main() {
     // color.rgb    = Contrast(color.rgb);
     // color.rgb    = LiftGammaGain(color.rgb);
     color.rgb = LinearToSRGB(color.rgb);
-    color.rgb = pow(color.rgb, vec3(1.4));
+    color.rgb = pow(color.rgb, vec3(1.0/2.2));
     
     gl_FragColor.rgb = color.rgb;
     

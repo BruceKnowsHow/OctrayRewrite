@@ -1,6 +1,7 @@
 uniform sampler2D colortex9;
 uniform sampler2D colortex8;
 uniform sampler2D colortex5;
+uniform sampler2D colortex6;
 uniform sampler2D depthtex0;
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferProjectionInverse;
@@ -74,6 +75,11 @@ void main() {
         exit();
         return;
     }
+    
+    vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
+    vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)) * 256.0 / 255.0;
+    diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
+    color.rgb /= max(diffuse.rgb, vec3(0.001));
     
     #define PT_ACCUMULATION
     #define PT_REPROJECTION
