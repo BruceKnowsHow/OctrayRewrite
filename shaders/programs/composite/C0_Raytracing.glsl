@@ -30,6 +30,7 @@ uniform sampler3D sky_tex;
 
 uniform usampler2D voxel_data_tex;
 layout (r32ui) uniform uimage2D voxel_data_img;
+layout (r32ui) uniform uimage2D colorimg3;
 uniform  sampler2D atlas_tex      ;
 uniform  sampler2D atlas_tex_n    ;
 uniform  sampler2D atlas_tex_s    ;
@@ -38,7 +39,7 @@ uniform  sampler2D atlas_tex_s    ;
 #include "../../includes/Random.glsl"
 
 vec3 GetWorldSpacePosition(vec2 coord, float depth) {
-    // coord.xy += (RandNext2F() - 0.5) / viewSize;
+    coord.xy += (RandNext2F() - 0.5) / viewSize;
     
     vec4 pos = vec4(vec3(coord, depth) * 2.0 - 1.0, 1.0);
     pos = gbufferProjectionInverse * pos;

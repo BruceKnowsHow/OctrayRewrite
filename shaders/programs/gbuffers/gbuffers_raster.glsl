@@ -220,7 +220,7 @@ void main() {
     
     ivec2 spriteSize = ivec2(_spriteSize);
     
-    ivec2 pCoord = Parallax(corner, tangent_pos, tangent_ray, spriteSize, plane, int(LOD));
+    ivec2 pCoord = Parallax(tangent_pos, tangent_ray, plane, corner, spriteSize, int(LOD));
     
     vec2 tCoord = _texcoord;
     // vec2 tCoord = vec2(pCoord)/atlasSize;

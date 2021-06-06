@@ -26,7 +26,7 @@ float GetTexelHeight(ivec2 coord, int lod, float sprite_size) {
     return mix(1.0, uintBitsToFloat(imageLoad(colorimg2, get_POM_coord(coord, lod)).r), sprite_size/4.0);
 }
 
-ivec2 Parallax(ivec2 corner, inout vec3 tangent_pos, vec3 tangent_ray, ivec2 sprite_size, inout vec3 normal, int LOD) {
+ivec2 Parallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 corner, ivec2 sprite_size, int lodLimit) {
     int lod = 0;
     
     if (tangent_ray.z >= 1) lod = 4;
@@ -43,7 +43,8 @@ ivec2 Parallax(ivec2 corner, inout vec3 tangent_pos, vec3 tangent_ray, ivec2 spr
     boundary.xy = floor(uvPos.xy/exp2(lod))*exp2(lod) + (dir_is_positive.xy)*exp2(lod);
     
     while (++steps < 128) {
-        if (tangent_ray.z > 0 && uvPos.z > 1.01 ) { return ivec2(0); }
+        // Escaped out the top.
+        if (tangent_ray.z > 0 && uvPos.z > 1.01 ) { tangent_pos = tangent_pos + tangent_ray * (1.0 - tangent_pos.z) / tangent_ray.z; return ivec2(-10); }
         
         ivec2 C = ivec2(uvPos.xy + sprite_size * 8) % sprite_size;
         
@@ -55,7 +56,7 @@ ivec2 Parallax(ivec2 corner, inout vec3 tangent_pos, vec3 tangent_ray, ivec2 spr
         
         if (dists.z < 0.0) plane = MinComponent(vec3(dists.xy, 1000000.0));
         
-        if (lod <= LOD && plane.z > 0.5) {
+        if (lod <= lodLimit && plane.z > 0.5) {
             if (-(uvPos.z - boundary.z) / tangent_ray.z >= 0.0) normal = plane;
             
             vec3  hit_points = boundary - step_dir * vec3(1.0, 1.0, 0.0);
@@ -72,13 +73,13 @@ ivec2 Parallax(ivec2 corner, inout vec3 tangent_pos, vec3 tangent_ray, ivec2 spr
         } else {
             int oldPos = int(dot(uvPos.xy, plane.xy));
             uvPos.xy = tangent_pos.xy + 1.0*tangent_ray.xy*dot(dists,plane) + step_dir.xy*plane.xy*exp2(-8);
-            uvPos.z = tangent_pos.z + 1.0*tangent_ray.z*dot(dists,plane) + step_dir.z*exp2(-10);
+            uvPos.z = tangent_pos.z + 1.0*tangent_ray.z*dot(dists,plane) + step_dir.z*exp2(-16);
             int newPos = int(dot(uvPos.xy, plane.xy));
             int shouldStepUp = int((newPos >> (lod+1)) != (oldPos >> (lod+1)));
             lod = min(lod + shouldStepUp, 4);
             normal = plane;
         }
-        if (lod <= LOD && tangent_ray.z > 0 && uvPos.z < boundary.z) { return ivec2(0); }
+        if (lod <= lodLimit && tangent_ray.z > 0 && uvPos.z < boundary.z) { return ivec2(0); }
         
         boundary.xy = floor(uvPos.xy / exp2(lod))*exp2(lod) + (dir_is_positive.xy )*exp2(lod);
     }

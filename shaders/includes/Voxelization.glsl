@@ -62,6 +62,10 @@ bool is_AABB(uint encoded) {
     return (encoded & VBM_AABB_bit) != 0;
 }
 
+bool IsConvexAABB(uint encoded) {
+    return is_AABB(encoded);
+}
+
 const int sparse_chunk_map_size = 512;
 
 const int sparse_voxel_buffer_width = 16384;
@@ -101,9 +105,6 @@ const int chunk_addr_buffer_start = sparse_voxel_buffer_size - sparse_chunk_map_
 const ivec2 chunk_alloc_counter = ivec2(sparse_voxel_buffer_width-3, sparse_voxel_buffer_height-1);
 const uint chunk_locked_bit = 1 << 31;
 const uint chunk_addr_mask = ~chunk_locked_bit;
-
-const ivec2 raybuffer_back  = ivec2(sparse_voxel_buffer_width-2, sparse_voxel_buffer_height-1);
-const ivec2 raybuffer_front = ivec2(sparse_voxel_buffer_width-1, sparse_voxel_buffer_height-1);
 
 // Get the base address of all voxel data with this lod
 int get_lod_base_addr(int lod) {

@@ -74,6 +74,24 @@ mat3 RecoverTangentMat(vec3 plane) {
     return tbn;
 }
 
+uint EncodePlane(vec3 plane) {
+    if (plane.x > 0.5) return 0;
+    if (plane.x < -0.5) return 1;
+    if (plane.y > 0.5) return 2;
+    if (plane.y < -0.5) return 3;
+    if (plane.z > 0.5) return 4;
+    if (plane.z < -0.5) return 5;
+}
+
+vec3 DecodePlane(uint enc) {
+    if (enc == 0) return vec3(1, 0, 0);
+    if (enc == 1) return vec3(-1, 0, 0);
+    if (enc == 2) return vec3(0, 1, 0);
+    if (enc == 3) return vec3(0, -1, 0);
+    if (enc == 4) return vec3(0, 0, 1);
+    return vec3(0, 0, -1);
+}
+
 struct AABB {
     vec3 minBounds;
     vec3 maxBounds;

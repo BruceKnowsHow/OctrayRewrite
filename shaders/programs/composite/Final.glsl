@@ -11,6 +11,10 @@ const int colortex2Format = R32UI;
 const bool colortex2Clear = false;
 const vec4 colortex2ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 
+const int colortex3Format = R32UI;
+const bool colortex3Clear = true;
+const vec4 colortex3ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
+
 const int colortex5Format = RGBA8;
 const bool colortex5Clear = true;
 const vec4 colortex5ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
@@ -51,7 +55,7 @@ void main() {
     
     vec4 color = texture(colortex9, texcoord);
     
-    if (texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).x < 1.0) {
+    if (false&&texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).x < 1.0) {
         vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
         vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)) * 256.0 / 255.0;
         diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
@@ -69,7 +73,7 @@ void main() {
     // color.rgb    = Contrast(color.rgb);
     // color.rgb    = LiftGammaGain(color.rgb);
     color.rgb = LinearToSRGB(color.rgb);
-    color.rgb = pow(color.rgb, vec3(1.0/2.2));
+    // color.rgb = pow(color.rgb, vec3(1.0/2.2));
     
     gl_FragColor.rgb = color.rgb;
     
