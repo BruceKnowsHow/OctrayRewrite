@@ -39,8 +39,6 @@ uniform  sampler2D atlas_tex_s    ;
 #include "../../includes/Random.glsl"
 
 vec3 GetWorldSpacePosition(vec2 coord, float depth) {
-    coord.xy += (RandNext2F() - 0.5) / viewSize;
-    
     vec4 pos = vec4(vec3(coord, depth) * 2.0 - 1.0, 1.0);
     pos = gbufferProjectionInverse * pos;
     pos /= pos.w;
@@ -99,7 +97,6 @@ void main() {
         
         curr.worldDir   = worldDir;
         curr.absorb     = pow(diffuse.rgb, vec3(2.2));
-        curr.absorb     = HSVtoRGB(pow(RGBtoHSV(curr.absorb), vec3(1.0, 1.0, 1.0)));
         curr.info       = 1;
         curr.screenCoord = ivec2(gl_GlobalInvocationID.xy);
         

@@ -24,8 +24,10 @@ const int colortex7Format = RGB32F;
 
 const int colortex8Format = RGBA32F;
 const int colortex9Format = RGBA32F;
+const int colortex10Format = RGBA32F;
 const bool colortex8Clear = false;
 const bool colortex9Clear = false;
+const bool colortex10Clear = false;
 */
 
 layout (r32ui) uniform uimage2D colorimg2;
@@ -34,6 +36,7 @@ uniform sampler2D colortex9;
 uniform sampler2D colortex8;
 uniform sampler2D colortex5;
 uniform sampler2D colortex6;
+uniform sampler2D colortex10;
 uniform sampler2D depthtex0;
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferModelView;
@@ -50,17 +53,13 @@ vec2 texcoord = gl_FragCoord.xy / viewSize * MC_RENDER_QUALITY;
 
 void main() {
     vec3 avgCol = textureLod(colortex9, vec2(0.5), 16).rgb / textureLod(colortex9, vec2(0.5), 16).a;
-    // float expo = pow(1.0 / dot(avgCol, vec3(3.0)), 0.7);
     float expo = pow(1.0 / dot(avgCol, vec3(1.0)), 1.0);
     
     vec4 color = texture(colortex9, texcoord);
     
-    if (false&&texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).x < 1.0) {
-        vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
-        vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)) * 256.0 / 255.0;
-        diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
-        color.rgb *= max(diffuse.rgb, vec3(0.001));
-    }
+    vec4 diffuse = texelFetch(colortex10, ivec2(gl_FragCoord.xy), 0); diffuse.rgb /= diffuse.a;
+    diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
+    color.rgb *= max(diffuse.rgb, vec3(0.001));
     
     color.rgb /= color.a;
     color.rgb *= min(expo, 1000.0) * 2.0;
@@ -82,6 +81,5 @@ void main() {
     
     #ifdef DEBUG
     gl_FragColor.rgb = imageLoad(colorimg5, ivec2(texcoord * viewSize)).rgb;
-    // gl_FragColor.rgb = texelFetch(colortex5, ivec2(texcoord * viewSize), 0).rgb;
     #endif
 }

@@ -208,7 +208,7 @@ void WriteBufferedRay(inout uint index, RayStruct ray) {
 
 // Atomic color write
 uvec2 EncodeColor(vec3 color) {
-    color = color * 256;
+    color = color * 1024;
     color = clamp(color, vec3(0.0), vec3(1 << 15));
     
     uvec3 col = uvec3(color);

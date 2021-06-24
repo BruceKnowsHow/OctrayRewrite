@@ -15,6 +15,8 @@ uniform mat4 gbufferProjection;
 uniform vec3 cameraPosition;
 uniform vec3 previousCameraPosition;
 uniform ivec2 atlasSize;
+uniform vec2 taaJitter;
+
 uniform vec2 viewSize;
 uniform float far;
 uniform float frameTimeCounter;
@@ -22,6 +24,7 @@ uniform float frameTimeCounter;
 #include "../../includes/Voxelization.glsl"
 
 layout (r32ui) uniform uimage2D voxel_data_img;
+
 
 out mat3 tanMat;
 out vec4 vertexColor;
@@ -58,8 +61,9 @@ void main() {
     viewPos     = (gbufferModelView * vec4(worldPos, 1.0)).xyz;
     
     gl_Position = gbufferProjection * vec4(viewPos, 1.0);
+    gl_Position.xy += taaJitter * gl_Position.w;
     
-    viewPos     = (mat3(gbufferModelViewInverse) * (gl_ModelViewMatrix * gl_Vertex).xyz);
+    viewPos = (mat3(gbufferModelViewInverse) * (gl_ModelViewMatrix * gl_Vertex).xyz);
     
     vec2 texDirection = sign(texcoord - mc_midTexCoord)*vec2(1,sign(at_tangent.w));
     vec3 triCentroid = worldPos.xyz - (tanMat * vec3(texDirection,0.5));

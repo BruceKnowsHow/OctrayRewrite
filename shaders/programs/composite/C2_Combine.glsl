@@ -1,4 +1,5 @@
 uniform sampler2D colortex9;
+uniform sampler2D colortex10;
 uniform sampler2D colortex8;
 uniform sampler2D colortex5;
 uniform sampler2D colortex6;
@@ -30,7 +31,7 @@ vec3 DecodeColor(uvec2 enc) {
     col.b = enc.g;
     
     vec3 color = vec3(col);
-    return color / 256.0;
+    return color / 1024.0;
 }
 
 vec3 ReadColor(ivec2 screenCoord) {
@@ -61,7 +62,7 @@ vec3 Reproject(vec3 screenPos) {
     return pos.xyz * 0.5 + 0.5;
 }
 
-/* DRAWBUFFERS:9 */
+/* RENDERTARGETS: 9,10 */
 
 void main() {
     ivec2 coord = ivec2(gl_FragCoord.xy);
@@ -70,16 +71,26 @@ void main() {
     
     vec4 color = vec4(ReadColor(ivec2(gl_FragCoord.xy)), 1.0);
     
-    if (false && depth >= 1.0) {
+    if (depth >= 1.0) {
         gl_FragData[0] = color;
+        gl_FragData[1] = vec4(1.0);
+        
+        if (accum) {
+            gl_FragData[0] += texelFetch(colortex9, coord, 0);
+            gl_FragData[1] += texelFetch(colortex10, coord, 0);
+        }
+        
         exit();
         return;
     }
     
-    // vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
-    // vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)) * 256.0 / 255.0;
-    // diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
-    // color.rgb /= max(diffuse.rgb, vec3(0.001));
+    vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
+    vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)) * 256.0 / 255.0;
+    
+    vec4 dif = diffuse;
+    
+    diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
+    color.rgb /= max(diffuse.rgb, vec3(0.001));
     
     #define PT_ACCUMULATION
     #define PT_REPROJECTION
@@ -88,29 +99,44 @@ void main() {
         
         #ifdef PT_REPROJECTION
             
-            vec3 prevCoord = Reproject(vec3(texcoord, depth));
-            float prevDepth = texelFetch(colortex8, ivec2(prevCoord.xy * viewSize), 0).x;
-            
-            float currLinDepth = LinearizeDepth(depth);
-            float prevLinDepth = LinearizeDepth(prevDepth);
-            
-            float reprojWeight = 1.0 - abs((currLinDepth - prevLinDepth) / currLinDepth) * 10.0;
-            
-            if (reprojWeight > 0.0 && prevDepth < 1.0) {
-                vec4 color_prev = textureLod(colortex9, prevCoord.xy, 0);
+            if (accum) {
+                color += texelFetch(colortex9, coord, 0);
+                dif += texelFetch(colortex10, coord, 0);
+            } else {
+                vec3 prevCoord = Reproject(vec3(texcoord, depth));
+                float prevDepth = texelFetch(colortex8, ivec2(prevCoord.xy * viewSize), 0).x;
                 
-                color += color_prev * reprojWeight;
+                float currLinDepth = LinearizeDepth(depth);
+                float prevLinDepth = LinearizeDepth(prevDepth);
+                
+                float reprojWeight = 1.0 - abs((currLinDepth - prevLinDepth) / currLinDepth) * 10.0 * float(!accum);
+                
+                if (reprojWeight > 0.0 && prevDepth < 1.0) {
+                    vec4 color_prev = textureLod(colortex9, prevCoord.xy, 0);
+                    
+                    color += color_prev * reprojWeight;
+                }
+                
+                reprojWeight = 1.0 - abs((currLinDepth - prevLinDepth) / currLinDepth) * 1000.0 * float(!accum);
+                
+                if (reprojWeight > 0.0 && prevDepth < 1.0) {
+                    vec4 diffuse_prev = textureLod(colortex10, prevCoord.xy, 0);
+                    
+                    dif += diffuse_prev * reprojWeight;
+                }
             }
             
         #else
         
             if (accum) color += texelFetch(colortex9, coord, 0);
+            if (accum) dif += texelFetch(colortex10, coord, 0);
             
         #endif
         
     #endif
     
     gl_FragData[0] = color;
+    gl_FragData[1] = dif;
     
     exit();
 }
