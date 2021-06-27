@@ -43,8 +43,8 @@ void DoPBR(vec4 diffuse, vec3 surfaceNormal, vec3 flatNormal, vec4 tex_s, vec3 w
     sunRay.absorb *= float(dot(sunRay.worldDir, flatNormal) > 0.0);
     
     #define AMBIENT_RAYS
-    #define SPECULAR_RAYS
     #define SUNLIGHT_RAYS
+    // #define SPECULAR_RAYS
     
     #ifndef AMBIENT_RAYS
         ambRay.absorb *= 0.0;

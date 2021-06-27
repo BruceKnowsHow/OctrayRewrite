@@ -57,7 +57,7 @@ RayStruct UnpackBufferedRay(BufferedRay buf) {
     return elem;
 }
 
-#define MAX_LIGHT_BOUNCES 3 // [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 256]
+#define MAX_LIGHT_BOUNCES 2 // [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 256]
 
 const uint  PRIMARY_RAY_TYPE = (1 <<  8);
 const uint SUNLIGHT_RAY_TYPE = (1 <<  9);

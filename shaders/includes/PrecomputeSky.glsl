@@ -22,14 +22,6 @@ struct DensityProfileLayer {
 	float constant_term;
 };
 
-// An atmosphere density profile made of several layers on top of each other
-// (from bottom to top). The width of the last layer is ignored, i.e. it always
-// extend to the top atmosphere boundary. The profile values vary between 0
-// (null density) to 1 (maximum density).
-struct DensityProfile {
-	DensityProfileLayer layers[2];
-};
-
 struct AtmosphereParameters {
 	// The solar irradiance at the top of the atmosphere.
 	vec3 solar_irradiance;
@@ -40,17 +32,11 @@ struct AtmosphereParameters {
 	float bottom_radius;
 	// The distance between the planet center and the top of the atmosphere.
 	float top_radius;
-	// The density profile of air molecules, i.e. a function from altitude to
-	// dimensionless values between 0 (null density) and 1 (maximum density).
-	DensityProfile rayleigh_density;
 	// The scattering coefficient of air molecules at the altitude where their
 	// density is maximum (usually the bottom of the atmosphere), as a function of
 	// wavelength. The scattering coefficient at altitude h is equal to
 	// 'rayleigh_scattering' times 'rayleigh_density' at this altitude.
 	vec3 rayleigh_scattering;
-	// The density profile of aerosols, i.e. a function from altitude to
-	// dimensionless values between 0 (null density) and 1 (maximum density).
-	DensityProfile mie_density;
 	// The scattering coefficient of aerosols at the altitude where their density
 	// is maximum (usually the bottom of the atmosphere), as a function of
 	// wavelength. The scattering coefficient at altitude h is equal to
@@ -64,10 +50,6 @@ struct AtmosphereParameters {
 	// The asymetry parameter for the Cornette-Shanks phase function for the
 	// aerosols.
 	float mie_phase_function_g;
-	// The density profile of air molecules that absorb light (e.g. ozone), i.e.
-	// a function from altitude to dimensionless values between 0 (null density)
-	// and 1 (maximum density).
-	DensityProfile absorption_density;
 	// The extinction coefficient of molecules that absorb light (e.g. ozone) at
 	// the altitude where their density is maximum, as a function of wavelength.
 	// The extinction coefficient at altitude h is equal to
@@ -93,17 +75,11 @@ const AtmosphereParameters ATMOSPHERE = AtmosphereParameters(
 	// The distance between the planet center and the top of the atmosphere.
 	6480.000000,
 //	6480.000000,
-	// The density profile of air molecules, i.e. a function from altitude to
-	// dimensionless values between 0 (null density) and 1 (maximum density).
-	DensityProfile(DensityProfileLayer[2](DensityProfileLayer(0.000000,0.000000,0.000000,0.000000,0.000000),DensityProfileLayer(0.000000,1.000000,-0.125000,0.000000,0.000000))),
 	// The scattering coefficient of air molecules at the altitude where their
 	// density is maximum (usually the bottom of the atmosphere), as a function of
 	// wavelength. The scattering coefficient at altitude h is equal to
 	// 'rayleigh_scattering' times 'rayleigh_density' at this altitude.
 	vec3(0.005802,0.013558,0.033100),
-	// The density profile of aerosols, i.e. a function from altitude to
-	// dimensionless values between 0 (null density) and 1 (maximum density).
-	DensityProfile(DensityProfileLayer[2](DensityProfileLayer(0.000000,0.000000,0.000000,0.000000,0.000000),DensityProfileLayer(0.000000,1.000000,-0.833333,0.000000,0.000000))),
 	// The scattering coefficient of aerosols at the altitude where their density
 	// is maximum (usually the bottom of the atmosphere), as a function of
 	// wavelength. The scattering coefficient at altitude h is equal to
@@ -117,10 +93,6 @@ const AtmosphereParameters ATMOSPHERE = AtmosphereParameters(
 	// The asymetry parameter for the Cornette-Shanks phase function for the
 	// aerosols.
 	0.800000,
-	// The density profile of air molecules that absorb light (e.g. ozone), i.e.
-	// a function from altitude to dimensionless values between 0 (null density)
-	// and 1 (maximum density).
-	DensityProfile(DensityProfileLayer[2](DensityProfileLayer(25.000000,0.000000,0.000000,0.066667,-0.666667),DensityProfileLayer(0.000000,0.000000,0.000000,-0.066667,2.666667))),
 	// The extinction coefficient of molecules that absorb light (e.g. ozone) at
 	// the altitude where their density is maximum, as a function of wavelength.
 	// The extinction coefficient at altitude h is equal to
