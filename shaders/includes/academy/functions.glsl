@@ -98,13 +98,13 @@ float rgbHue(vec3 rgb) {
     return clamp(hue, 0.0, 360.0);
 }
 
-float rgbYC(vec3 rgb, const float ycRadweight) {
+float rgbYC1(vec3 rgb, const float ycRadweight) {
     float chroma    = sqrt(rgb.b * (rgb.b - rgb.g) + rgb.g * (rgb.g - rgb.r) + rgb.r * (rgb.r - rgb.b));
 
     return (rgb.b + rgb.g + rgb.r + ycRadweight * chroma) * rcp(3.0);
 }
 float rgbYC(vec3 rgb) {
-    return rgbYC(rgb, 1.75);
+    return rgbYC1(rgb, 1.75);
 }
 
 float centerHue(float hue, float center) {

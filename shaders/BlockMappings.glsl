@@ -1,13 +1,7 @@
 #if MC_VERSION >= 11300
-	int backport_id(int ID) {
-		if (ID == -1) return 1; // un-assigned blocks in 1.13+
-		
-		return ID;
-	}
+	#define backport_id(ID) ((ID) == -1 ? 1 : (ID))
 #else
-	int backport_id(int ID) {
-		return ID;
-	}
+	#define backport_id(ID) (ID)
 #endif
 
 #if (defined gbuffers_entities)

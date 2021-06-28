@@ -58,12 +58,12 @@ int decode_sprite_size(uint encoded) {
     return int((encoded >> VMB_sprite_size_start) & VBM_sprite_size_mask);
 }
 
-bool is_AABB(uint encoded) {
-    return (encoded & VBM_AABB_bit) != 0;
+bool is_AABB(uint enc) {
+    return (enc & VBM_AABB_bit) != 0;
 }
 
-bool IsConvexAABB(uint encoded) {
-    return is_AABB(encoded);
+bool IsConvexAABB(uint enc) {
+    return is_AABB(enc);
 }
 
 const int sparse_chunk_map_size = 512;

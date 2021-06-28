@@ -1,10 +1,10 @@
 uniform usampler2D voxel_data_tex;
-uniform  sampler2D atlas_tex      ;
-uniform  sampler2D atlas_tex_n    ;
-uniform  sampler2D atlas_tex_s    ;
+uniform  sampler2D atlas_tex;
+uniform  sampler2D atlas_tex_n;
+uniform  sampler2D atlas_tex_s;
 
 struct VoxelIntersectOut {
-    bool  hit  ;
+    bool  hit;
     vec3  voxelPos;
     vec3  plane;
     ivec2 voxel_coord;
@@ -100,7 +100,7 @@ struct AABB {
 // Optimized AABB function that only does binary checks.
 // Will erroniously find intersections which happen behind pos.
 // Useful for the interior marching loop, which needs to be very fast.
-bool IntersectAABB(vec3 pos, vec3 dir, AABB aabb) {
+bool SimpleIntersectAABB(vec3 pos, vec3 dir, AABB aabb) {
     vec3 minBoundsDist = (aabb.minBounds - pos) / dir;
     vec3 maxBoundsDist = (aabb.maxBounds - pos) / dir;
     
@@ -277,7 +277,7 @@ VoxelIntersectOut VoxelIntersect(vec3 voxelPos, vec3 worldDir) {
             vec3 fract_pos = mix(temp - floorTemp, 1 - vec3(dir_pos), vec3(-uplane));
             int block_id = decode_block_id(data);
             
-            if (!IntersectAABB(fract_pos, worldDir, unpack_AABB(bounds[block_id/4][block_id%4]))) {
+            if (!SimpleIntersectAABB(fract_pos, worldDir, unpack_AABB(bounds[block_id/4][block_id%4]))) {
                 lod = 0;
                 hit = 0;
             }

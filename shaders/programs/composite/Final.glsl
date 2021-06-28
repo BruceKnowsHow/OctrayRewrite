@@ -1,4 +1,4 @@
-/*
+/* config
 const int colortex0Format = R32UI;
 const bool colortex0Clear = true;
 const vec4 colortex0ClearColor = vec4(0.0, 0.0, 0.0, 0.0);

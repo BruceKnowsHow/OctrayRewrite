@@ -67,7 +67,7 @@ float sigmoidShaper(float x) {
 
 float cubicBasisShaper(float x, float w) {
 
-    const vec4 M[4] = vec4[4](
+    const vec4 MAT[4] = vec4[4](
         vec4( -1.0 / 6.0,  3.0 / 6.0, -3.0 / 6.0,  1.0 / 6.0),
         vec4(  3.0 / 6.0, -6.0 / 6.0,  3.0 / 6.0,  0.0 / 6.0), 
         vec4( -3.0 / 6.0,  0.0 / 6.0,  3.0 / 6.0,  0.0 / 6.0), 
@@ -99,17 +99,17 @@ float cubicBasisShaper(float x, float w) {
 
         /* this section can be simplified */
         if (j == 3) {
-            y   = monomials[0] * M[0].x + monomials[1] * M[1].x
-                + monomials[2] * M[2].x + monomials[3] * M[3].x;
+            y   = monomials[0] * MAT[0].x + monomials[1] * MAT[1].x
+                + monomials[2] * MAT[2].x + monomials[3] * MAT[3].x;
         } else if (j == 2) {
-            y   = monomials[0] * M[0].y + monomials[1] * M[1].y
-                + monomials[2] * M[2].y + monomials[3] * M[3].y;
+            y   = monomials[0] * MAT[0].y + monomials[1] * MAT[1].y
+                + monomials[2] * MAT[2].y + monomials[3] * MAT[3].y;
         } else if (j == 1) {
-            y   = monomials[0] * M[0].z + monomials[1] * M[1].z
-                + monomials[2] * M[2].z + monomials[3] * M[3].z;
+            y   = monomials[0] * MAT[0].z + monomials[1] * MAT[1].z
+                + monomials[2] * MAT[2].z + monomials[3] * MAT[3].z;
         } else if (j == 0) {
-            y   = monomials[0] * M[0].w + monomials[1] * M[1].w
-                + monomials[2] * M[2].w + monomials[3] * M[3].w;
+            y   = monomials[0] * MAT[0].w + monomials[1] * MAT[1].w
+                + monomials[2] * MAT[2].w + monomials[3] * MAT[3].w;
         } else {
             y   = 0.0;
         }
@@ -118,7 +118,7 @@ float cubicBasisShaper(float x, float w) {
     return y * 1.5;
 }
 
-const mat3 M = mat3(
+const mat3 MAT = mat3(
     0.5, -1.0, 0.5,
     -1.0, 1.0, 0.5, 
     0.5, 0.0, 0.0
@@ -165,7 +165,7 @@ float segmentedSplineC5Fwd(float x) {
 
         vec3 monomials = vec3(sqr(t), t, 1.0);
 
-        logy    = dot(monomials, M * cf);
+        logy    = dot(monomials, MAT * cf);
     } else if ((logx >= log10(c.midPoint.x)) && (logx < log10(c.maxPoint.x))) {
         float knotCoord = (N_KNOTS_HIGH - 1) * (logx - log10(c.midPoint.x)) * rcp(log10(c.maxPoint.x) - log10(c.midPoint.x));
         int j   = int(knotCoord);
@@ -175,7 +175,7 @@ float segmentedSplineC5Fwd(float x) {
 
         vec3 monomials = vec3(sqr(t), t, 1.0);
 
-        logy    = dot(monomials, M * cf);
+        logy    = dot(monomials, MAT * cf);
     } else {
         logy    = logx * c.slopeHigh + (log10(c.maxPoint.y) - c.slopeHigh * log10(c.maxPoint.x));
     }
@@ -212,7 +212,7 @@ float segmentedSplineC9Fwd(float x, const segmentedSplineParamC9 c) {
 
         vec3 monomials = vec3(sqr(t), t, 1.0);
 
-        logy    = dot(monomials, M * cf);
+        logy    = dot(monomials, MAT * cf);
     } else if ((logx >= log10(c.midPoint.x)) && (logx < log10(c.maxPoint.x))) {
         float knotCoord = (N_KNOTS_HIGH - 1) * (logx - log10(c.midPoint.x)) * rcp(log10(c.maxPoint.x) - log10(c.midPoint.x));
         int j   = int(knotCoord);
@@ -222,7 +222,7 @@ float segmentedSplineC9Fwd(float x, const segmentedSplineParamC9 c) {
 
         vec3 monomials = vec3(sqr(t), t, 1.0);
 
-        logy    = dot(monomials, M * cf);
+        logy    = dot(monomials, MAT * cf);
     } else {
         logy    = logx * c.slopeHigh + (log10(c.maxPoint.y) - c.slopeHigh * log10(c.maxPoint.x));
     }

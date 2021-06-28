@@ -25,19 +25,10 @@ void inc( vec4 x) { deb = true; Debug += x.rgb; }
 
 #if defined fsh
 	void exit() { if (deb) imageStore(colorimg5, ivec2(gl_FragCoord.xy), vec4(Debug, 0.0)); }
-#elif defined csh
-	void exit(ivec2 screenCoord) { if (deb) imageStore(colorimg5, screenCoord, vec4(Debug, 0.0)); }
 #endif
-
-
-// #ifdef DRAW_DEBUG_VALUE
-// 	// Display the value of the variable on the debug value viewer
-// 	#define showval(x) if (all(equal(ivec2(gl_FragCoord.xy), ivec2(viewSize/2)))) show(x);
-// 	#define incval(x)  if (all(equal(ivec2(gl_FragCoord.xy), ivec2(viewSize/2)))) inc(x);
-// #else
-// 	#define showval(x)
-// 	#define incval(x)
-// #endif
+#if defined csh
+	void exitCoord(ivec2 screenCoord) { if (deb) imageStore(colorimg5, screenCoord, vec4(Debug, 0.0)); }
+#endif
 
 
 #ifndef DEBUG
@@ -51,11 +42,5 @@ void inc( vec4 x) { deb = true; Debug += x.rgb; }
 	#define show(x) show(x);
 	#define inc(x) inc(x);
 #endif
-
-// //#define FREEZE_NOISE
-
-// #ifdef FREEZE_NOISE
-// 	#define frameCounter 0
-// #endif
 
 #endif

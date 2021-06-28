@@ -82,7 +82,7 @@ void main() {
         if (depth0 >= 1.0) {
             vec3 color = ComputeTotalSky(vec3(0.0), worldDir, absorb, true);
             WriteColor(color / 4.0, ivec2(gl_GlobalInvocationID.xy));
-            exit(ivec2(gl_GlobalInvocationID.xy));
+            exitCoord(ivec2(gl_GlobalInvocationID.xy));
             return;
         }
         
@@ -111,9 +111,9 @@ void main() {
         DoPBR(diffuse, surfaceNormal, surfaceNormal, tex_s, curr.worldDir, specRay, ambRay, sunRay);
         
         uint i;
-        WriteBufferedRay(i, specRay);
-        WriteBufferedRay(i, ambRay);
-        WriteBufferedRay(i, sunRay);
+        WriteRay(i, specRay);
+        WriteRay(i, ambRay);
+        WriteRay(i, sunRay);
     #else
         RayStruct curr;
         curr.voxelPos = WorldToVoxelSpace(vec3(0.0));
@@ -123,8 +123,8 @@ void main() {
         curr.screenCoord = ivec2(gl_GlobalInvocationID.xy);
         
         uint i;
-        WriteBufferedRay(i, curr);
+        WriteRay(i, curr);
     #endif
     
-    exit(ivec2(gl_GlobalInvocationID.xy));
+    exitCoord(ivec2(gl_GlobalInvocationID.xy));
 }

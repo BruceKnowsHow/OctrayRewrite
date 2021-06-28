@@ -119,8 +119,13 @@ uint RaybufferIncrementWarp(const ivec2 index) {
     return addr;
 }
 
-#define RaybufferPushWarp() RaybufferIncrementWarp(raybuffer_back)
-#define RaybufferPopWarp()  RaybufferIncrementWarp(raybuffer_front)
+uint RaybufferPushWarp() {
+    return RaybufferIncrementWarp(raybuffer_back);
+}
+
+uint RaybufferPopWarp() {
+    return RaybufferIncrementWarp(raybuffer_front);
+}
 
 ivec2 page_back = ivec2(2, 0);
 const uint page_capacity = (1024) << 6;
@@ -199,7 +204,7 @@ bool RayIsVisible(RayStruct ray) {
     return ray.absorb.x + ray.absorb.y + ray.absorb.z > 1.0 / 255.0;
 }
 
-void WriteBufferedRay(inout uint index, RayStruct ray) {
+void WriteRay(inout uint index, RayStruct ray) {
     if (!RayIsVisible(ray)) return;
     
     index = RaybufferPushWarp();

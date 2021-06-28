@@ -99,9 +99,9 @@ void Something(vec3 voxelPos, uint packedVoxelData, vec4 diffuse, ivec2 texel_co
         }
     }
     
-    WriteBufferedRay(qBack, specRay);
-    WriteBufferedRay(qBack, ambRay);
-    WriteBufferedRay(qBack, sunRay);
+    WriteRay(qBack, specRay);
+    WriteRay(qBack, ambRay);
+    WriteRay(qBack, sunRay);
     
     queue_size = int(qBack) - int(qFront);
 }
@@ -157,7 +157,7 @@ void main()  {
             if (diffuse.a < 0.1) { // Escape
                 curr.voxelPos += fract_pos + -plane * exp2(-11);
                 curr.info &= ~STENCIL_RAY_TYPE;
-                WriteBufferedRay(qBack, curr);
+                WriteRay(qBack, curr);
             } else { // Hit
                 if (IsSunlightRay(curr)) continue;
                 if (GetRayDepth(curr) >= MAX_LIGHT_BOUNCES) continue;
@@ -194,7 +194,7 @@ void main()  {
                 curr.info &= ~PARALLAX_RAY_TYPE;
                 curr.info &= ((1<<24)-1);
                 curr.worldDir = tanMat * curr.worldDir;
-                WriteBufferedRay(qBack, curr);
+                WriteRay(qBack, curr);
                 continue;
             }
             
@@ -230,9 +230,9 @@ void main()  {
             sunRay.worldDir = sunRay.worldDir * tanMat;
             sunRay.absorb = curr.absorb;
             
-            WriteBufferedRay(qBack, specRay);
-            WriteBufferedRay(qBack, ambRay);
-            WriteBufferedRay(qBack, sunRay);
+            WriteRay(qBack, specRay);
+            WriteRay(qBack, ambRay);
+            WriteRay(qBack, sunRay);
             continue;
         }
         
@@ -290,7 +290,7 @@ void main()  {
         if (diffuse.a <= 0.1) {
             // curr.info |= STENCIL_RAY_TYPE;
             // curr.voxelPos = VIO.voxelPos - VIO.plane * exp2(-12);
-            // WriteBufferedRay(qBack, curr);
+            // WriteRay(qBack, curr);
             
             // continue;
         } else if (diffuse.a < 1.0) {
@@ -306,7 +306,7 @@ void main()  {
             
             // curr.info |= EncodePlane(VIO.plane) << 24;
             
-            // WriteBufferedRay(qBack, curr);
+            // WriteRay(qBack, curr);
             
             // continue;
         }

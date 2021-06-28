@@ -68,11 +68,11 @@ void main() {
     vec2 texDirection = sign(texcoord - mc_midTexCoord)*vec2(1,sign(at_tangent.w));
     vec3 triCentroid = worldPos.xyz - (tanMat * vec3(texDirection,0.5));
     ivec3 voxelPos = ivec3(WorldToVoxelSpace(triCentroid));
-    ivec2 CC = get_sparse_chunk_coord(voxelPos);
+    ivec2 chunk_coord = get_sparse_chunk_coord(voxelPos);
     
-    if ((imageLoad(voxel_data_img, CC).r & chunk_locked_bit) == 0) {
-        if ((imageAtomicOr(voxel_data_img, CC, chunk_locked_bit) & chunk_locked_bit) == 0) {
-            imageAtomicOr(voxel_data_img, CC, imageAtomicAdd(voxel_data_img, chunk_alloc_counter, 1));
+    if ((imageLoad(voxel_data_img, chunk_coord).r & chunk_locked_bit) == 0) {
+        if ((imageAtomicOr(voxel_data_img, chunk_coord, chunk_locked_bit) & chunk_locked_bit) == 0) {
+            imageAtomicOr(voxel_data_img, chunk_coord, imageAtomicAdd(voxel_data_img, chunk_alloc_counter, 1));
         }
     }
 }
