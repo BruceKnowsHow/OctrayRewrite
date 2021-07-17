@@ -19,7 +19,7 @@ uniform int frameCounter;
 
 vec2 texcoord = gl_GlobalInvocationID.xy / viewSize;
 
-#include "../../includes/Debug.glsl"
+#include "../../includes/debug.glsl"
 
 #define sky_tex colortex11
 uniform sampler3D sky_tex;

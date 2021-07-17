@@ -10,7 +10,7 @@ uniform float frameTimeCounter;
 uniform float far;
 uniform int frameCounter;
 
-#include "../../includes/Debug.glsl"
+#include "../../includes/debug.glsl"
 
 // Voxelization and voxel intersection
 #include "../../includes/Voxelization.glsl"

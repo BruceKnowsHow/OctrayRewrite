@@ -17,7 +17,7 @@ uniform bool accum;
 
 vec2 texcoord = gl_FragCoord.xy / viewSize;
 
-#include "../../includes/Debug.glsl"
+#include "../../includes/debug.glsl"
 #include "../../includes/Voxelization.glsl"
 
 

@@ -198,7 +198,7 @@ in vec2 _texcoord;
 flat in vec2 _cornerTexcoord;
 flat in vec2 _spriteSize;
 
-#include "../../includes/Debug.glsl"
+#include "../../includes/debug.glsl"
 
 float EncodeNormal(vec3 normal) {
     const float bits = 11.0;

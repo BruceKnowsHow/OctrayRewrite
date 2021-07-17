@@ -47,7 +47,7 @@ const bool colortex9MipmapEnabled = true;
 
 vec2 texcoord = gl_FragCoord.xy / viewSize * MC_RENDER_QUALITY;
 
-#include "../../includes/Debug.glsl"
+#include "../../includes/debug.glsl"
 
 #include "../../includes/academy/aces.glsl"
 
