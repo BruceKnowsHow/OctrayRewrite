@@ -1,4 +1,4 @@
-// #define ATROUS_FILTER
+// #define ANY_ATROUS_FILTER
 
 // #define ATROUS_FILTER_PASSES_1
 // #define ATROUS_FILTER_PASSES_2
@@ -6,7 +6,7 @@
 // #define ATROUS_FILTER_PASSES_4
 // #define ATROUS_FILTER_PASSES_5
 
-#ifdef ATROUS_FILTER
+#ifdef ANY_ATROUS_FILTER
 #endif
 #ifdef ATROUS_FILTER_PASSES_1
 #endif

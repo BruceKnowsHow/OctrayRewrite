@@ -1,10 +1,17 @@
 #if !defined SKY_GLSL
 #define SKY_GLSL
 
-//#define CLOUDS_2D
+#define CLOUDS_2D
 #define CLOUD_HEIGHT_2D   512  // [384 512 640 768]
 #define CLOUD_COVERAGE_2D 0.5  // [0.3 0.4 0.5 0.6 0.7]
 #define CLOUD_SPEED_2D    1.00 // [0.25 0.50 1.00 2.00 4.00]
+
+#ifdef CLOUDS_2D
+	const bool clouds_2d = true;
+#else
+	const bool clouds_2d = false;
+#endif
+
 
 const int noiseTextureResolution = 64;
 
@@ -77,6 +84,9 @@ vec3 sunlightColor = vec3(1.0, 1.0, 1.0);
 vec3 skylightColor = vec3(0.6, 0.8, 1.0);
 
 vec3 Compute2DCloudPlane(vec3 wPos, vec3 wDir, inout vec3 transmit, float sunglow) {
+	if (!clouds_2d)
+		return vec3(0.0);
+	
 	const float cloudHeight = CLOUD_HEIGHT_2D;
 	
 	wPos += cameraPosition;
@@ -127,9 +137,6 @@ vec3 Compute2DCloudPlane(vec3 wPos, vec3 wDir, inout vec3 transmit, float sunglo
 	
 	return cloud * cloudAlpha * oldTransmit * 5.0;
 }
-#ifndef CLOUDS_2D
-	#define Compute2DCloudPlane(wPos, wDir, transmit, sunglow) vec3(0.0)
-#endif
 
 #define STARS true // [true false]
 #define REFLECT_STARS false // [true false]

@@ -31,16 +31,4 @@ void inc( vec4 x) { deb = true; Debug += x.rgb; }
 #endif
 
 
-#ifndef DEBUG
-	//#define CRASH_DANGLING_SHOW
-#endif
-
-#ifdef CRASH_DANGLING_SHOW
-	#define show(x) DANGLING_SHOW
-	#define inc(x) DANGLING_SHOW
-#else
-	#define show(x) show(x);
-	#define inc(x) inc(x);
-#endif
-
 #endif
