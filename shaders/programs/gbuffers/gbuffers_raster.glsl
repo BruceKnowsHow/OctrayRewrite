@@ -63,7 +63,7 @@ void main() {
     gl_Position = gbufferProjection * vec4(viewPos, 1.0);
     gl_Position.xy += taaJitter * gl_Position.w;
     
-    viewPos = (mat3(gbufferModelViewInverse) * (gl_ModelViewMatrix * gl_Vertex).xyz);
+    viewPos = (gbufferModelViewInverse * (gl_ModelViewMatrix * gl_Vertex)).xyz;
     
     vec2 texDirection = sign(texcoord - mc_midTexCoord)*vec2(1,sign(at_tangent.w));
     vec3 triCentroid = worldPos.xyz - (tanMat * vec3(texDirection,0.5));

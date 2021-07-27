@@ -21,10 +21,6 @@ vec2 texcoord = gl_GlobalInvocationID.xy / viewSize;
 
 #include "../../includes/debug.glsl"
 
-#define sky_tex colortex11
-uniform sampler3D sky_tex;
-#include "../../includes/Sky.glsl"
-
 #include "../../includes/Voxelization.glsl"
 #include "../../BlockMappings.glsl"
 
@@ -42,7 +38,7 @@ vec3 GetWorldSpacePosition(vec2 coord, float depth) {
     vec4 pos = vec4(vec3(coord, depth) * 2.0 - 1.0, 1.0);
     pos = gbufferProjectionInverse * pos;
     pos /= pos.w;
-    pos.xyz = mat3(gbufferModelViewInverse) * pos.xyz;
+    pos.xyz = (gbufferModelViewInverse * pos).xyz;
     
     return pos.xyz;
 }
@@ -80,8 +76,6 @@ void main() {
     #define RASTER_ENGINE
     #ifdef RASTER_ENGINE
         if (depth0 >= 1.0) {
-            vec3 color = ComputeTotalSky(vec3(0.0), worldDir, absorb, true);
-            WriteColor(color / 4.0, ivec2(gl_GlobalInvocationID.xy));
             exitCoord(ivec2(gl_GlobalInvocationID.xy));
             return;
         }

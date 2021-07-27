@@ -26,6 +26,10 @@ float GetTexelHeight(ivec2 coord, int lod, float sprite_size) {
     return mix(1.0, uintBitsToFloat(imageLoad(colorimg2, get_POM_coord(coord, lod)).r), sprite_size/4.0);
 }
 
+// #define PARALLAX
+#ifdef PARALLAX
+#endif
+
 ivec2 Parallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 corner, ivec2 sprite_size, int lodLimit) {
     int lod = 0;
     

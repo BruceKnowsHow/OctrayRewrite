@@ -1,10 +1,10 @@
-// #define ANY_ATROUS_FILTER
+#define ANY_ATROUS_FILTER
 
-// #define ATROUS_FILTER_PASSES_1
-// #define ATROUS_FILTER_PASSES_2
-// #define ATROUS_FILTER_PASSES_3
-// #define ATROUS_FILTER_PASSES_4
-// #define ATROUS_FILTER_PASSES_5
+#define ATROUS_FILTER_PASSES_1
+#define ATROUS_FILTER_PASSES_2
+#define ATROUS_FILTER_PASSES_3
+#define ATROUS_FILTER_PASSES_4
+#define ATROUS_FILTER_PASSES_5
 
 #ifdef ANY_ATROUS_FILTER
 #endif
@@ -21,11 +21,16 @@
 
 uniform sampler2D colortex6;
 uniform sampler2D colortex9;
+uniform sampler2D colortex10;
+uniform sampler2D colortex11;
 uniform sampler2D depthtex0;
 
-uniform mat4 gbufferProjectionInverse;
+#include "../../includes/debug.glsl"
 
-/* DRAWBUFFERS:9 */
+uniform mat4 gbufferProjectionInverse;
+uniform vec2 viewSize;
+
+/* RENDERTARGETS:11,9 */
 
 vec3 DecodeNormal(float enc) {
     const float bits = 11.0;
@@ -47,42 +52,90 @@ float LinearizeDepth(float depth) {
 	return -1.0 / ((depth * 2.0 - 1.0) * gbufferProjectionInverse[2].w + gbufferProjectionInverse[3].w);
 }
 
+float Luminance(vec3 x) {
+    return dot(x, vec3(0.2126, 0.7152, 0.0722));
+}
+
 void main() {
-    if (texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).x >= 1.0) {
-		gl_FragData[0] = texelFetch(colortex9, ivec2(gl_FragCoord.xy), 0);
+    float depth = texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).x;
+    
+    if (depth >= 1.0) {
+        gl_FragData[0] = vec4(0.0, 0.0, 0.0, 1.0);
 		return;
 	}
     
-    vec4 col = vec4(0.0);
-    
-    float weights = 0.0;
+    vec3 diffuse = texelFetch(colortex11, ivec2(gl_FragCoord.xy), 0).rgb;
     
     vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
     vec3 normal = DecodeNormal(gbufferEncode.g);
-    float depth = LinearizeDepth(texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).x);
+    float linDepth = LinearizeDepth(depth);
     
-    int kernel = 1 << ATROUS_INDEX;
+    float diffuseLum = Luminance(diffuse);
     
-    for (int i = -kernel; i <= kernel; i += 1 << ATROUS_INDEX) {
-		for (int j = -kernel; j <= kernel; j += 1 << ATROUS_INDEX) {
-            ivec2 icoord = ivec2(gl_FragCoord.xy) + ivec2(i,j);
+    vec2 moments = texelFetch(colortex10, ivec2(gl_FragCoord.xy), 0).rg;
+    float diffuseHistory = texelFetch(colortex10, ivec2(gl_FragCoord.xy), 0).b;
+    
+    
+    float variance = max(1e-10, moments.y - moments.x * moments.x);
+    
+    float diffuseSigma = diffuseHistory / (2.0 * variance);
+    
+    if (diffuseLum <= sqrt(moments.x))
+        diffuseSigma /= abs(moments.x - diffuseLum + 1.0);
+    
+    float diffuseNormalWeight = clamp(diffuseHistory / 8.0, 0.0, 1.0) * 128.0;
+    
+    const int stepSize = 1 << ATROUS_INDEX;
+    
+    vec3 diffuseSum = diffuse;
+    vec2 momentsSum = moments;
+    
+    float diffuseSumW = 1.0;
+    
+    const vec3 kernel = vec3(6.0, 4.0, 1.0);
+    
+    float v = max(1.0, diffuseHistory - 32.0);
+    
+    const int r = min(2, int(2.0 / log(v)));
+    for (int yy = -r; yy <= r; yy++) {
+        for (int xx = -r; xx <= r; xx++) {
+            ivec2 p = ivec2(gl_FragCoord.xy) + ivec2(xx, yy) * stepSize;
+            bool outside = any(lessThan(p, ivec2(0))) || any(greaterThan(p, ivec2(viewSize)));
             
-            vec3 samplenormal = DecodeNormal(texelFetch(colortex6, icoord, 0).g);
-            float sampledepth = LinearizeDepth(texelFetch(depthtex0, icoord, 0).x);
-            vec4 color = texelFetch(colortex9, icoord, 0);
+            float depthP = texelFetch(depthtex0, p, 0).x;
             
-            float weight = 1.0;
-            weight *= max(dot(normal, samplenormal)*16-15, 0.0);
-			weight *= max(1.0-distance(depth, sampledepth), 0.0);
-			weight = weight + 0.000001;
+            if (xx == 0 && yy == 0 || outside || depthP >= 1.0)
+                continue;
             
-            col += color * weight;
-			weights += weight;
+            vec3  gbufferEncodeP = texelFetch(colortex6, p, 0).rgb;
+            vec3  diffuseP       = texelFetch(colortex11, p, 0).rgb;
+            vec2  momentsP       = texelFetch(colortex10, p, 0).rg;
+            vec3  normalP        = DecodeNormal(gbufferEncodeP.g);
+            float linDepthP      = LinearizeDepth(depthP);
             
+            float diffuseLumP = Luminance(diffuseP);
+            float diffuseLumDist = abs(moments.x - diffuseLumP);
+            
+            float distL = diffuseLumDist * diffuseLumDist * diffuseSigma;
+            float distZ = abs(linDepth - linDepthP) * 16.0 / float(stepSize);
+            float NdotN = max(0.0, dot(normal, normalP));
+            
+            float weight  = exp(0.0 - distZ - distL);
+                  weight *= kernel[abs(xx)] * kernel[abs(yy)];
+            
+            float diffuseW = weight * pow(NdotN, diffuseNormalWeight);
+            diffuseSum   += diffuseP * diffuseW;
+            momentsSum   += momentsP * diffuseW;
+            diffuseSumW  += diffuseW;
         }
     }
     
-    col /= weights;
+    diffuseSum /= diffuseSumW;
+    momentsSum /= diffuseSumW;
     
-    gl_FragData[0] = col;
+    gl_FragData[0] = vec4(diffuseSum, 0.0);
+    diffuse = mix(diffuse, diffuseSum, 1.0 / diffuseHistory);
+    gl_FragData[1] = vec4(diffuse, 0);
+    
+    exit();
 }

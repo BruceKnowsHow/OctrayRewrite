@@ -39,7 +39,7 @@ layout (r32ui) uniform uimage2D colorimg3;
 // Sky
 uniform sampler2D noisetex;
 
-#define sky_tex colortex11
+#define sky_tex colortex12
 uniform sampler3D sky_tex;
 #include "../../includes/Sky.glsl"
 /**********************************************************************/
@@ -236,15 +236,13 @@ void main()  {
             continue;
         }
         
-        
-        
         VoxelIntersectOut VIO = VoxelIntersect(curr.voxelPos, curr.worldDir);
         
         if (!VIO.hit) {
             vec3 color = vec3(0.0);
             
             if (IsSunlightRay(curr))
-                color += curr.absorb * vec3(1.0) * GetSunIrradiance(kPoint(VoxelToWorldSpace(VIO.voxelPos)), sunDirection);
+                color += curr.absorb * vec3(1.0) * GetSunIrradiance(kPoint(VoxelToWorldSpace(VIO.voxelPos)), sunDirection) * (1 + 3*float(GetRayDepth(curr) > 1));
             else
                 color += ComputeTotalSky(VoxelToWorldSpace(VIO.voxelPos), curr.worldDir, curr.absorb, false) * 0.2 / (IsPrimaryRay(curr) ? 4.0 : 1.0);
             
@@ -286,7 +284,6 @@ void main()  {
         vec4 diffuse = texelFetch(atlas_tex, texel_coord, 0);
         vec4 tex_n = texelFetch(atlas_tex_n, texel_coord, 0);
         
-        
         if (diffuse.a <= 0.1) {
             // curr.info |= STENCIL_RAY_TYPE;
             // curr.voxelPos = VIO.voxelPos - VIO.plane * exp2(-12);
@@ -314,6 +311,10 @@ void main()  {
         if (IsSunlightRay(curr)) {
             continue;
         }
+        
+        // if (diffuse.a < 1.0) {
+        //     WriteColor(curr.absorb * 4.0 * vec3(1.0, 0.5, 0.3), curr.screenCoord);
+        // }
         
         // Create the new rays
         Something(VIO.voxelPos, packedVoxelData, diffuse, texel_coord, tex_n,

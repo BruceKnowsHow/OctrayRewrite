@@ -15,7 +15,7 @@ uniform vec2 viewSize;
 uniform float far;
 uniform bool accum;
 
-vec2 texcoord = gl_FragCoord.xy / viewSize;
+vec2 texcoord = (gl_FragCoord.xy + vec2(0.5)) / viewSize;
 
 #include "../../includes/debug.glsl"
 #include "../../includes/Voxelization.glsl"
@@ -46,13 +46,15 @@ vec3 ReadColor(ivec2 screenCoord) {
 }
 /**********************************************************************/
 
+
 float LinearizeDepth(float depth) {
 	return -1.0 / ((depth * 2.0 - 1.0) * gbufferProjectionInverse[2].w + gbufferProjectionInverse[3].w);
 }
 
 vec3 Reproject(vec3 screenPos) {
-    vec4 pos  = gbufferModelViewInverse * gbufferProjectionInverse * vec4(screenPos * 2.0 - 1.0, 1.0);
+    vec4 pos  = gbufferProjectionInverse * vec4(screenPos * 2.0 - 1.0, 1.0);
          pos /= pos.w;
+         pos  = gbufferModelViewInverse * pos;
     
     pos.xyz += cameraPosition - previousCameraPosition;
     
@@ -62,81 +64,179 @@ vec3 Reproject(vec3 screenPos) {
     return pos.xyz * 0.5 + 0.5;
 }
 
-/* RENDERTARGETS: 9,10 */
+float Luminance(vec3 x) {
+    return dot(x, vec3(0.2126, 0.7152, 0.0722));
+}
+
+vec3 CalculateViewSpacePosition(vec3 screenPos) {
+    vec4 pos = gbufferProjectionInverse * vec4(screenPos * 2.0 - 1.0, 1.0);
+    
+    return pos.xyz / pos.w;
+}
+
+vec3 CalculateCameraVelocity(vec3 screenPos) {
+    vec3 viewPos = CalculateViewSpacePosition(screenPos);
+    vec3 projection = mat3(gbufferModelViewInverse) * viewPos + gbufferModelViewInverse[3].xyz;
+         projection = (cameraPosition - previousCameraPosition) + projection;
+         projection = mat3(gbufferPreviousModelView) * projection + gbufferPreviousModelView[3].xyz;
+    
+    vec4 proj = gbufferPreviousProjection * vec4(projection, 1.0);
+    projection = proj.xyz / proj.w * 0.5 + 0.5;
+    
+    return vec3(screenPos.xy - projection.xy, viewPos.z - LinearizeDepth(projection.z));
+}
+
+vec3 DecodeNormal(float enc) {
+    const float bits = 11.0;
+    
+	vec4 normal;
+	
+	normal.y    = exp2(bits + 2.0) * floor(enc / exp2(bits + 2.0));
+	normal.x    = enc - normal.y;
+	normal.xy  /= exp2(vec2(bits, bits * 2.0 + 2.0));
+	normal.x   -= 1.0;
+	normal.xy  *= 3.14159;
+	normal.xwzy = vec4(sin(normal.xy), cos(normal.xy));
+	normal.xz  *= normal.w;
+	
+	return normal.xyz;
+}
+
+/* RENDERTARGETS: 9,10,11 */
+
+// #define TAA
+#ifdef TAA
+#endif
+
+#define PT_ACCUMULATION
+#define PT_REPROJECTION
 
 void main() {
     ivec2 coord = ivec2(gl_FragCoord.xy);
     
     float depth = texelFetch(depthtex0, coord, 0).x;
     
-    vec4 color = vec4(ReadColor(ivec2(gl_FragCoord.xy)), 1.0);
+    vec3 diffuse = ReadColor(ivec2(gl_FragCoord.xy));
     
     if (depth >= 1.0) {
-        gl_FragData[0] = color;
-        gl_FragData[1] = vec4(1.0);
-        
-        if (accum) {
-            gl_FragData[0] += texelFetch(colortex9, coord, 0);
-            gl_FragData[1] += texelFetch(colortex10, coord, 0);
-        }
+        gl_FragData[0] = vec4(0.0, 0.0, 0.0, 1.0);
         
         exit();
         return;
     }
     
     vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
-    vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)) * 256.0 / 255.0;
+    vec3 albedo = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)).rgb * 256.0 / 255.0;
+    vec3 normal = DecodeNormal(gbufferEncode.g);
     
-    vec4 dif = diffuse;
+    albedo = pow(albedo, vec3(2.2));
+    diffuse /= max(albedo, vec3(0.001));
     
-    diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
-    color.rgb /= max(diffuse.rgb, vec3(0.001));
+    float diffuseLum = Luminance(diffuse);
     
-    #define PT_ACCUMULATION
-    #define PT_REPROJECTION
+    float linDepth = LinearizeDepth(depth);
     
-    #ifdef PT_ACCUMULATION
+    vec3 reproject = Reproject(vec3(texcoord, depth));
+    
+    vec3 motionVector = CalculateCameraVelocity(vec3(texcoord, depth));
+
+	vec3 temporalDiffuse = vec3(0.0);
+	vec2 moments  = vec2(0.0);
+    float history = 0.0;
+    
+    float temporalSumDifW = 0.0;
+    
+    vec2  prevCoord  = reproject.xy * viewSize - 1.0;
+    vec2  fractCoord = fract(prevCoord);
+    
+    // Bilinear
+    const ivec2 offsets[4] = {{0, 0}, {1, 0}, {0, 1}, {1, 1}};
+    vec4 bilinWeight = vec4(
+        (1.0 - fractCoord.x) * (1.0 - fractCoord.y),
+        (fractCoord.x      ) * (1.0 - fractCoord.y),
+        (1.0 - fractCoord.x) * (fractCoord.y      ),
+        (fractCoord.x      ) * (fractCoord.y      )
+    );
+    
+    // Quad search for reprojected pixels
+    for (int i = 0; i < 4; ++i) {
+        ivec2 coord = ivec2(prevCoord) + offsets[i];
         
-        #ifdef PT_REPROJECTION
+        vec4  prevData  = texelFetch(colortex8, coord, 0);
+        float prevDepth = prevData.r;
+        
+        bool offscreen = any(greaterThan(coord, viewSize)) || any(lessThan(coord, ivec2(0)));
+        bool isSky     = prevDepth >= 1.0;
+        
+        if (offscreen || isSky)
+            continue;
+        
+        vec3  prevNormal   = DecodeNormal(prevData.g);
+        float prevLinDepth = LinearizeDepth(prevDepth);
+        
+        float distDepth  = abs(LinearizeDepth(reproject.z) - prevLinDepth) * 4.0;
+        float dotNormals = dot(normal, prevNormal);
+        
+        if (distDepth < 2.0 && dotNormals > 0.5) {
+            float wDiff = bilinWeight[i] * dotNormals;
             
-            if (accum) {
-                color += texelFetch(colortex9, coord, 0);
-                dif += texelFetch(colortex10, coord, 0);
-            } else {
-                vec3 prevCoord = Reproject(vec3(texcoord, depth));
-                float prevDepth = texelFetch(colortex8, ivec2(prevCoord.xy * viewSize), 0).x;
+            temporalDiffuse += texelFetch(colortex9 , coord, 0).rgb * wDiff;
+            moments         += texelFetch(colortex10, coord, 0).rg  * wDiff;
+            history         += texelFetch(colortex10, coord, 0).b   * wDiff;
+            
+            temporalSumDifW += wDiff;
+        }
+    }
+    
+    if (temporalSumDifW > 0.001) {
+        temporalDiffuse /= temporalSumDifW;
+        moments  /= temporalSumDifW;
+        history  /= temporalSumDifW;
+    }
+    
+    
+    // Spatial moment filter
+    vec2 spatialMoments = vec2(0.0);
+    float spatialSumDifW = 0.0;
+    int spatialDist = int(3.0 / clamp(history, 1.0, 3.0));
+    
+    for (int yy = -spatialDist; yy <= spatialDist; yy++) {
+        for (int xx = -spatialDist; xx <= spatialDist; xx++) {
+            ivec2 p = ivec2(gl_FragCoord.xy) + ivec2(xx, yy);
+            
+            vec3 gbufferEncodeP = texelFetch(colortex6, p, 0).rgb;
+            
+            vec3 albedoP = unpackUnorm4x8(floatBitsToUint(gbufferEncodeP.r)).rgb * 256.0 / 255.0;
+            albedoP = pow(albedoP, vec3(2.2));
+            
+            vec3 diffuseP = ReadColor(p) / max(albedoP, vec3(0.001));
+            
+            float diffuseLumP = Luminance(diffuseP);
+            vec3 normalP = DecodeNormal(gbufferEncodeP.g);
+            float linDepthP = LinearizeDepth(texelFetch(depthtex0, p, 0).x);
+            
+            float distZ = abs(linDepth - linDepthP) * 16.0;
+            
+            if (distZ < 2.0) {
+                float diffW = pow(max(0.0, dot(normal, normalP)), 16.0);
                 
-                float currLinDepth = LinearizeDepth(depth);
-                float prevLinDepth = LinearizeDepth(prevDepth);
-                
-                float reprojWeight = 1.0 - abs((currLinDepth - prevLinDepth) / currLinDepth) * 10.0 * float(!accum);
-                
-                if (reprojWeight > 0.0 && prevDepth < 1.0) {
-                    vec4 color_prev = textureLod(colortex9, prevCoord.xy, 0);
-                    
-                    color += color_prev * reprojWeight;
-                }
-                
-                reprojWeight = 1.0 - abs((currLinDepth - prevLinDepth) / currLinDepth) * 1000.0 * float(!accum);
-                
-                if (reprojWeight > 0.0 && prevDepth < 1.0) {
-                    vec4 diffuse_prev = textureLod(colortex10, prevCoord.xy, 0);
-                    
-                    dif += diffuse_prev * reprojWeight;
-                }
+                spatialMoments += vec2(diffuseLumP, diffuseLumP * diffuseLumP) * diffW;
+                spatialSumDifW += diffW;
             }
-            
-        #else
-        
-            if (accum) color += texelFetch(colortex9, coord, 0);
-            if (accum) dif += texelFetch(colortex10, coord, 0);
-            
-        #endif
-        
-    #endif
+        }
+    }
     
-    gl_FragData[0] = color;
-    gl_FragData[1] = dif;
+    spatialMoments /= spatialSumDifW;
+    
+    
+    history += 1.0;
+    
+    moments = mix(moments, spatialMoments, 1.0 / history);
+    diffuse = mix(temporalDiffuse, diffuse, 1.0 / history);
+    
+    gl_FragData[0] = vec4(diffuse, 0.0);
+    gl_FragData[1] = vec4(moments, history, 0.0);
+    gl_FragData[2] = vec4(diffuse, 0.0);
     
     exit();
 }

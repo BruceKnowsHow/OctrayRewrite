@@ -87,14 +87,14 @@ int voxel_area   = voxel_dimensions.x * voxel_dimensions.z;
 int voxel_volume = voxel_dimensions.y * voxel_area;
 
 vec3 WorldToVoxelSpace(vec3 position) {
-    vec3 WtoV = gbufferModelViewInverse[3].xyz;
+    vec3 WtoV = vec3(0.0);
     WtoV.y += cameraPosition.y;
     WtoV.xz += voxel_radius + (cameraPosition.xz - floor(cameraPosition.xz/16.0)*16.0);
     return position + WtoV;
 }
 
 vec3 VoxelToWorldSpace(vec3 position) {
-    vec3 WtoV = gbufferModelViewInverse[3].xyz;
+    vec3 WtoV = vec3(0.0);
     WtoV.y += cameraPosition.y;
     WtoV.xz += voxel_radius + (cameraPosition.xz - floor(cameraPosition.xz/16.0)*16.0);
     return position - WtoV;
