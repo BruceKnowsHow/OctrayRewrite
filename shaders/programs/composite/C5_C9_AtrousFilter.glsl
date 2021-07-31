@@ -96,7 +96,7 @@ void main() {
     
     float v = max(1.0, diffuseHistory - 32.0);
     
-    const int r = min(2, int(2.0 / log(v)));
+    const int r = min(1, int(2.0 / log(v)));
     for (int yy = -r; yy <= r; yy++) {
         for (int xx = -r; xx <= r; xx++) {
             ivec2 p = ivec2(gl_FragCoord.xy) + ivec2(xx, yy) * stepSize;
@@ -133,8 +133,9 @@ void main() {
     diffuseSum /= diffuseSumW;
     momentsSum /= diffuseSumW;
     
-    gl_FragData[0] = vec4(diffuseSum, 0.0);
     diffuse = mix(diffuse, diffuseSum, 1.0 / diffuseHistory);
+    
+    gl_FragData[0] = vec4(diffuseSum, 0.0);
     gl_FragData[1] = vec4(diffuse, 0);
     
     exit();

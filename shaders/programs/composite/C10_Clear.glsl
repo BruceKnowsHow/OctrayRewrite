@@ -30,21 +30,7 @@ vec3 GetWorldSpacePosition(vec2 coord, float depth) {
     return pos.xyz;
 }
 
-/* RENDERTARGETS:11,8 */
-
-
-// float depth0 = texelFetch(depthtex0, ivec2(gl_GlobalInvocationID.xy), 0).x;
-    
-// vec3 worldPos = GetWorldSpacePosition(texcoord, depth0);
-// vec3 worldDir = normalize(worldPos);
-// vec3 voxelPos = WorldToVoxelSpace(worldPos);
-
-// vec3 absorb = vec3(1.0);
-
-// #define RASTER_ENGINE
-// #ifdef RASTER_ENGINE
-// if (depth0 >= 1.0) {
-//     // vec3 color = ComputeTotalSky(vec3(0.0), worldDir, absorb, true);
+/* RENDERTARGETS:11 */
 
 void main() {
     ivec2 coord = ivec2(gl_FragCoord.xy);
@@ -70,7 +56,6 @@ void main() {
     albedo = pow(albedo, vec3(2.2));
     
     gl_FragData[0].rgb = texelFetch(colortex11, coord, 0).rgb * albedo;
-    gl_FragData[1] = vec4(depth, gbufferEncode.g, 0.0, 0.0);
     
     exit();
 }

@@ -12,6 +12,8 @@ uniform mat4 gbufferModelView;
 uniform vec3 cameraPosition;
 uniform vec3 previousCameraPosition;
 uniform vec2 viewSize;
+uniform vec2 taaJitter;
+uniform vec2 taaPrevJitter;
 uniform float far;
 uniform bool accum;
 
@@ -74,18 +76,6 @@ vec3 CalculateViewSpacePosition(vec3 screenPos) {
     return pos.xyz / pos.w;
 }
 
-vec3 CalculateCameraVelocity(vec3 screenPos) {
-    vec3 viewPos = CalculateViewSpacePosition(screenPos);
-    vec3 projection = mat3(gbufferModelViewInverse) * viewPos + gbufferModelViewInverse[3].xyz;
-         projection = (cameraPosition - previousCameraPosition) + projection;
-         projection = mat3(gbufferPreviousModelView) * projection + gbufferPreviousModelView[3].xyz;
-    
-    vec4 proj = gbufferPreviousProjection * vec4(projection, 1.0);
-    projection = proj.xyz / proj.w * 0.5 + 0.5;
-    
-    return vec3(screenPos.xy - projection.xy, viewPos.z - LinearizeDepth(projection.z));
-}
-
 vec3 DecodeNormal(float enc) {
     const float bits = 11.0;
     
@@ -104,7 +94,7 @@ vec3 DecodeNormal(float enc) {
 
 /* RENDERTARGETS: 9,10,11 */
 
-// #define TAA
+#define TAA
 #ifdef TAA
 #endif
 
@@ -136,10 +126,12 @@ void main() {
     
     float linDepth = LinearizeDepth(depth);
     
-    vec3 reproject = Reproject(vec3(texcoord, depth));
+    vec3 reproject = Reproject(vec3(texcoord - taaJitter * 0.5, depth));
     
-    vec3 motionVector = CalculateCameraVelocity(vec3(texcoord, depth));
-
+    reproject.xy += taaPrevJitter * 0.5;
+    
+    float reprojDist = length(reproject.xy * viewSize - 0.5 - (gl_FragCoord.xy));
+    
 	vec3 temporalDiffuse = vec3(0.0);
 	vec2 moments  = vec2(0.0);
     float history = 0.0;
@@ -158,6 +150,11 @@ void main() {
         (fractCoord.x      ) * (fractCoord.y      )
     );
     
+    if (accum && dot(vec4(1.0), textureGather(colortex8, texcoord, 2)) < 0.5 && unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)).a < 0.5) {
+        temporalDiffuse = texelFetch(colortex9 , ivec2(gl_FragCoord.xy), 0).rgb;
+        moments = texelFetch(colortex10 , ivec2(gl_FragCoord.xy), 0).rg;
+        history = texelFetch(colortex10 , ivec2(gl_FragCoord.xy), 0).b;
+    } else {
     // Quad search for reprojected pixels
     for (int i = 0; i < 4; ++i) {
         ivec2 coord = ivec2(prevCoord) + offsets[i];
@@ -192,6 +189,8 @@ void main() {
         temporalDiffuse /= temporalSumDifW;
         moments  /= temporalSumDifW;
         history  /= temporalSumDifW;
+    }
+    
     }
     
     

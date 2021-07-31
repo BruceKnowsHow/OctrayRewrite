@@ -26,14 +26,16 @@ const int colortex8Format = RGBA32F;
 const int colortex9Format = RGBA32F;
 const int colortex10Format = RGBA32F;
 const int colortex11Format = RGBA32F;
+const int colortex13Format = RGBA32F;
 const bool colortex8Clear = false;
 const bool colortex9Clear = false;
 const bool colortex10Clear = false;
+const bool colortex13Clear = false;
 */
 
 layout (r32ui) uniform uimage2D colorimg2;
 
-uniform sampler2D colortex11;
+uniform sampler2D colortex13;
 uniform sampler2D colortex8;
 uniform sampler2D colortex5;
 uniform sampler2D colortex6;
@@ -46,7 +48,7 @@ uniform vec2 viewSize;
 
 uniform int hideGUI;
 
-const bool colortex11MipmapEnabled = true;
+const bool colortex13MipmapEnabled = true;
 
 vec2 texcoord = gl_FragCoord.xy / viewSize * MC_RENDER_QUALITY;
 
@@ -55,10 +57,10 @@ vec2 texcoord = gl_FragCoord.xy / viewSize * MC_RENDER_QUALITY;
 #include "../../includes/academy/aces.glsl"
 
 void main() {
-    vec3 avgCol = textureLod(colortex11, vec2(0.5), 16).rgb;
+    vec3 avgCol = textureLod(colortex13, vec2(0.5), 16).rgb;
     float expo = pow(1.0 / sqrt(dot(avgCol, vec3(1.0))), 1.5);
     
-    vec3 diffuse = texture(colortex11, texcoord).rgb;
+    vec3 diffuse = texture(colortex13, texcoord).rgb;
     
     vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
     vec3 albedo = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)).rgb * 256.0 / 255.0;

@@ -1,11 +1,11 @@
-#if MC_VERSION >= 11300
-	#define backport_id(ID) ((ID) == -1 ? 1 : (ID))
-#else
-	#define backport_id(ID) (ID)
-#endif
-
-#if (defined gbuffers_entities)
+#if defined gbuffers_entities
 	#define backport_id(ID) 0
+#else
+	#if MC_VERSION >= 11300
+		#define backport_id(ID) ((ID) == -1 ? 1 : (ID))
+	#else
+		#define backport_id(ID) (ID)
+	#endif
 #endif
 
 

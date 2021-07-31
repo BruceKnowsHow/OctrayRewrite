@@ -242,7 +242,7 @@ void main()  {
             vec3 color = vec3(0.0);
             
             if (IsSunlightRay(curr))
-                color += curr.absorb * vec3(1.0) * GetSunIrradiance(kPoint(VoxelToWorldSpace(VIO.voxelPos)), sunDirection) * (1 + 3*float(GetRayDepth(curr) > 1));
+                color += curr.absorb * vec3(1.0) * GetSunIrradiance(kPoint(VoxelToWorldSpace(VIO.voxelPos)), sunDirection);
             else
                 color += ComputeTotalSky(VoxelToWorldSpace(VIO.voxelPos), curr.worldDir, curr.absorb, false) * 0.2 / (IsPrimaryRay(curr) ? 4.0 : 1.0);
             

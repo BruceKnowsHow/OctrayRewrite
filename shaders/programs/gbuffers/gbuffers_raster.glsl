@@ -246,6 +246,12 @@ void main() {
     
     vec3 surfaceNormal = _tanMat * normal;
     
+    #if (defined gbuffers_entities) || (defined gbuffers_hand)
+        diffuse.a = 1.0;
+    #else
+        diffuse.a = 0.0;
+    #endif
+    
     gl_FragData[0].rgb = vec3(uintBitsToFloat(packUnorm4x8(diffuse * 255.0 / 256.0)), EncodeNormal(surfaceNormal), uintBitsToFloat(packUnorm4x8(texture(specular, tCoord) * 255.0 / 256.0)));
     gl_FragData[1].rgb = _voxelPos + _tanMat[2] * exp2(-11);
     
