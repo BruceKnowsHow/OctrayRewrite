@@ -1,0 +1,19 @@
+screen.Pathtracing=Path Tracing
+option.MAX_LIGHT_BOUNCES=Light Bounces
+option.MAX_LIGHT_BOUNCES.comment=The maximum number of times light is allowed to bounce.
+option.SUNLIGHT_RAYS=Sunlight Rays
+option.AMBIENT_RAYS=Ambient Rays
+option.SPECULAR_RAYS=Reflection Rays
+
+option.ANY_ATROUS_FILTER=Advanced Filter
+option.ANY_ATROUS_FILTER.comment=A spatial filter
+option.ATROUS_FILTER_PASSES_1=Filter Pass 1
+option.ATROUS_FILTER_PASSES_2=Filter Pass 2
+option.ATROUS_FILTER_PASSES_3=Filter Pass 3
+option.ATROUS_FILTER_PASSES_4=Filter Pass 4
+option.ATROUS_FILTER_PASSES_5=Filter Pass 5
+
+screen.Effects=Post Effects
+
+option.BLOOM=Bloom
+option.TAA.comment=Temporal anti-aliasing.

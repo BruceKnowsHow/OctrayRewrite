@@ -98,9 +98,6 @@ vec3 DecodeNormal(float enc) {
 #ifdef TAA
 #endif
 
-#define PT_ACCUMULATION
-#define PT_REPROJECTION
-
 void main() {
     ivec2 coord = ivec2(gl_FragCoord.xy);
     

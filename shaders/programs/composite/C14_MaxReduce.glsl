@@ -14,6 +14,9 @@ uniform sampler2D depthtex2;
 #include "../../includes/Parallax.glsl"
 
 void main() {
+    
+    
+    #ifdef PARALLAX
     if (imageLoad(colorimg2, ivec2(4095)).r != 0) return;
     
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
@@ -32,4 +35,5 @@ void main() {
             imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 7), floatBitsToUint(texel_height));
         }
     }
+    #endif
 }
