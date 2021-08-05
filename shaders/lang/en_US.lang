@@ -17,3 +17,7 @@ screen.Effects=Post Effects
 
 option.BLOOM=Bloom
 option.TAA.comment=Temporal anti-aliasing.
+
+
+option.RASTER_ENGINE=Raster Engine
+option.DEBUG=Debug Viewer

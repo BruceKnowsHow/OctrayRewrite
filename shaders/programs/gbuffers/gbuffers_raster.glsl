@@ -115,6 +115,7 @@ out vec3 _voxelPos;
 out vec2 _texcoord;
 flat out vec2 _cornerTexcoord;
 flat out vec2 _spriteSize;
+flat out int _blockID;
 
 void main() {
     _spriteSize = abs(midTexcoord[0] - texcoord[0]) * 2.0 * atlasSize;
@@ -125,9 +126,10 @@ void main() {
         _vertexColor = vertexColor[i];
         _worldPos = worldPos[i];
         _viewPos  = viewPos[i];
-        _voxelPos = voxelPos[i];
+        _voxelPos = mix(voxelPos[i], (voxelPos[0] + voxelPos[1] + voxelPos[2]) / 3.0, exp2(-6)); // Nudge voxelPos (used as ray origin) away from the voxel corners to prevent light bleeding.
         _texcoord = texcoord[i];
         _cornerTexcoord = cornerTexcoord[i];
+        _blockID = blockID[i];
         EmitVertex();
     }
     
@@ -160,9 +162,9 @@ void main() {
     vec2 hueSat           = RGBtoHSV(vertexColor[0].rgb).rg;
     uint packedVoxelData = 0;
     packedVoxelData |= blockID[0];
-    packedVoxelData |= int(clamp(hueSat.r, 0.0, 1.0) * 255.0) << VMB_hue_start;
-    packedVoxelData |= int(clamp(hueSat.g, 0.0, 1.0) * 255.0) << VMB_sat_start;
-    packedVoxelData |= int(round(log2(_spriteSize.x))) << VMB_sprite_size_start;
+    packedVoxelData |= int(clamp(hueSat.r, 0.0, 1.0) * 255.0) << VBM_hue_start;
+    packedVoxelData |= int(clamp(hueSat.g, 0.0, 1.0) * 255.0) << VBM_sat_start;
+    packedVoxelData |= int(round(log2(_spriteSize.x))) << VBM_sprite_size_start;
     if (is_sub_voxel(blockID[0])) packedVoxelData |= VBM_AABB_bit;
     
     uint chunkAddr = imageLoad(voxel_data_img, get_sparse_chunk_coord(voxelPos)).r & chunk_addr_mask;
@@ -197,6 +199,7 @@ in vec3 _voxelPos;
 in vec2 _texcoord;
 flat in vec2 _cornerTexcoord;
 flat in vec2 _spriteSize;
+flat in int _blockID;
 
 #include "../../includes/debug.glsl"
 
@@ -252,7 +255,7 @@ void main() {
         diffuse.a = 0.0;
     #endif
     
-    gl_FragData[0].rgb = vec3(uintBitsToFloat(packUnorm4x8(diffuse * 255.0 / 256.0)), EncodeNormal(surfaceNormal), uintBitsToFloat(packUnorm4x8(texture(specular, tCoord) * 255.0 / 256.0)));
+    gl_FragData[0] = vec4(uintBitsToFloat(packUnorm4x8(diffuse * 255.0 / 256.0)), EncodeNormal(surfaceNormal), uintBitsToFloat(packUnorm4x8(texture(specular, tCoord) * 255.0 / 256.0)), _blockID);
     gl_FragData[1].rgb = _voxelPos + _tanMat[2] * exp2(-11);
     
     // exit();

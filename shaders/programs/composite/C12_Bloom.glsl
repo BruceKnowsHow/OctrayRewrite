@@ -39,7 +39,7 @@ vec3 ComputeBloomTile(const float scale, vec2 offset) { // Computes a single blo
 			
 			vec2 offset = vec2(i, j) / viewSize;
 			
-			vec4 lookup = textureLod(colortex13, coord + offset, Lod);
+			vec4 lookup = pow(textureLod(colortex13, coord + offset, Lod), vec4(vec3(2.2), 1.0));
 			
 			bloom       += lookup.rgb * weight;
 			totalWeight += weight;

@@ -19,7 +19,7 @@ const int colortex5Format = RGBA8;
 const bool colortex5Clear = true;
 const vec4 colortex5ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 
-const int colortex6Format = RGB32F;
+const int colortex6Format = RGBA32F;
 const int colortex7Format = RGB32F;
 
 const int colortex8Format = RGBA32F;
@@ -160,10 +160,10 @@ vec3 GetBloom(sampler2D tex, vec3 color) {
 
 
 void main() {
-    vec3 avgCol = textureLod(colortex13, vec2(0.5), 16).rgb;
-    float expo = pow(1.0 / sqrt(dot(avgCol, vec3(1.0))), 1.5);
+    vec3 avgCol = pow(textureLod(colortex13, vec2(0.5), 16).rgb, vec3(2.2));
+    float expo = pow(1.0 / (dot(avgCol, vec3(1.0))), 1.0);
     
-    vec3 diffuse = texture(colortex13, texcoord).rgb;
+    vec3 diffuse = pow(texture(colortex13, texcoord).rgb, vec3(2.2));
     
     vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
     vec3 albedo = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)).rgb * 256.0 / 255.0;
@@ -193,6 +193,4 @@ void main() {
     if (hideGUI == 1)
         gl_FragColor.rgb = imageLoad(colorimg5, ivec2(texcoord * viewSize)).rgb;
     #endif
-    
-    // gl_FragColor.rgb = texture(colortex14, texcoord).rgb;
 }

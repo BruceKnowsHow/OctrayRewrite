@@ -252,8 +252,6 @@ void main()  {
             continue;
         }
         
-        if (GetRayDepth(curr) >= MAX_LIGHT_BOUNCES) continue;
-        
         uint packedVoxelData = texelFetch(voxel_data_tex, VIO.voxel_coord + DATA0, 0).r;
         int  blockID = decode_block_id(packedVoxelData);
         
@@ -284,6 +282,23 @@ void main()  {
         vec4 diffuse = texelFetch(atlas_tex, texel_coord, 0);
         vec4 tex_n = texelFetch(atlas_tex_n, texel_coord, 0);
         
+        
+        if (is_emissive(blockID) && !IsSunlightRay(curr)) {
+            float hue = decode_hue(packedVoxelData);
+            float sat = decode_sat(packedVoxelData);
+            
+            vec3 diffuse2 = pow(diffuse.rgb, vec3(1.0));
+            diffuse2 *= HSVtoRGB(vec3(hue, sat, 1.0));
+            WriteColor(curr.absorb * diffuse2.rgb, curr.screenCoord);
+        }
+        
+        if (GetRayDepth(curr) >= MAX_LIGHT_BOUNCES)
+            continue;
+        
+        // if (GetRayDepth(curr) == 0) {
+        //     show(diffuse);
+        //     exitCoord(curr.screenCoord);
+        // }
         if (diffuse.a <= 0.1) {
             // curr.info |= STENCIL_RAY_TYPE;
             // curr.voxelPos = VIO.voxelPos - VIO.plane * exp2(-12);

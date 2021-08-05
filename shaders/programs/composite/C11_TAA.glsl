@@ -54,15 +54,15 @@ vec3 FastCatmulRom(sampler2D colorTex, vec2 texcoord, vec4 rtMetrics, float shar
 
     vec2 w12 = w1 + w2;
     vec2 tc12 = rtMetrics.xy * (centerPosition + w2 / w12);
-    vec3 centerColor = texture(colorTex, vec2(tc12.x, tc12.y)).rgb;
+    vec3 centerColor = pow(texture(colorTex, vec2(tc12.x, tc12.y)).rgb, vec3(2.2));
 
     vec2 tc0 = rtMetrics.xy * (centerPosition - 1.0);
     vec2 tc3 = rtMetrics.xy * (centerPosition + 2.0);
-    vec4 color = vec4(texture(colorTex, vec2(tc12.x, tc0.y )).rgb, 1.0) * (w12.x *  w0.y) +
-                 vec4(texture(colorTex, vec2(tc0.x,  tc12.y)).rgb, 1.0) * ( w0.x * w12.y) +
+    vec4 color = vec4(pow(texture(colorTex, vec2(tc12.x, tc0.y )).rgb, vec3(2.2)), 1.0) * (w12.x *  w0.y) +
+                 vec4(pow(texture(colorTex, vec2(tc0.x,  tc12.y)).rgb, vec3(2.2)), 1.0) * ( w0.x * w12.y) +
                  vec4(centerColor,                                 1.0) * (w12.x * w12.y) +
-                 vec4(texture(colorTex, vec2(tc3.x,  tc12.y)).rgb, 1.0) * ( w3.x * w12.y) +
-                 vec4(texture(colorTex, vec2(tc12.x, tc3.y )).rgb, 1.0) * (w12.x *  w3.y);
+                 vec4(pow(texture(colorTex, vec2(tc3.x,  tc12.y)).rgb, vec3(2.2)), 1.0) * ( w3.x * w12.y) +
+                 vec4(pow(texture(colorTex, vec2(tc12.x, tc3.y )).rgb, vec3(2.2)), 1.0) * (w12.x *  w3.y);
     
 	return color.rgb/color.a;
 }
@@ -71,7 +71,7 @@ vec3 calculateTAA() {
     if (accum && false && dot(vec4(1.0), textureGather(colortex8, texcoord, 2)) < 0.5
     && unpackUnorm4x8(floatBitsToUint(texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).r)).a < 0.5) {
         vec3 A = texture(colortex11, texcoord).rgb;
-        vec3 B = texture(colortex13, texcoord).rgb;
+        vec3 B = pow(texture(colortex13, texcoord).rgb, vec3(2.2));
         return mix(A, B, 0.95);
     }
     
@@ -116,9 +116,9 @@ void main() {
     float depth = texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).x;
     
     #ifdef TAA
-        gl_FragData[0].rgb = calculateTAA();
+        gl_FragData[0].rgb = pow(calculateTAA(), vec3(1.0 / 2.2));
     #else
-        gl_FragData[0].rgb = texelFetch(colortex11, coord, 0).rgb;
+        gl_FragData[0].rgb = pow(texelFetch(colortex11, coord, 0).rgb, vec3(1.0 / 2.2));
     #endif
     
     vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;

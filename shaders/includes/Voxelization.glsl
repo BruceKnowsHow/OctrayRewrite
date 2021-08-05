@@ -23,39 +23,39 @@ const float sunPathRotation = 40; // [-60 -50 -40 -30 -20 -10 0 10 20 30 40 50 6
 #define voxel_data_img colorimg0
 #define voxel_data_tex colortex0
 
-// Voxel bit mask
+// Voxel Bit Mask
 const int VBM_block_id_start = 0;
 const int VBM_block_id_size  = 8;
 const int VBM_block_id_mask  = (1 << VBM_block_id_size) - 1;
 
 const int VBM_AABB_bit = 1 << (VBM_block_id_size);
 
-const int VMB_hue_start = VBM_block_id_start + 1;
-const int VMB_hue_size  = 8;
-const int VBM_hue_mask  = (1 << VMB_hue_size) - 1;
+const int VBM_hue_start = VBM_block_id_size + 1;
+const int VBM_hue_size  = 8;
+const int VBM_hue_mask  = (1 << VBM_hue_size) - 1;
 
-const int VMB_sat_start = VMB_hue_start + VMB_hue_size;
-const int VMB_sat_size  = 8;
-const int VBM_sat_mask  = (1 << VMB_sat_size) - 1;
+const int VBM_sat_start = VBM_hue_start + VBM_hue_size;
+const int VBM_sat_size  = 8;
+const int VBM_sat_mask  = (1 << VBM_sat_size) - 1;
 
-const int VMB_sprite_size_start = VMB_sat_start + VMB_sat_size;
-const int VMB_sprite_size_size  = 8;
-const int VBM_sprite_size_mask  = (1 << VMB_sprite_size_size) - 1;
+const int VBM_sprite_size_start = VBM_sat_start + VBM_sat_size;
+const int VBM_sprite_size_size  = 8;
+const int VBM_sprite_size_mask  = (1 << VBM_sprite_size_size) - 1;
 
 int decode_block_id(uint encoded) {
     return int(encoded & VBM_block_id_mask);
 }
 
 float decode_hue(uint encoded) {
-    return float((encoded >> VMB_hue_start) & VBM_hue_mask) / 255.0;
+    return float((encoded >> VBM_hue_start) & VBM_hue_mask) / 255.0;
 }
 
 float decode_sat(uint encoded) {
-    return float((encoded >> VMB_sat_start) & VBM_sat_mask) / 255.0;
+    return float((encoded >> VBM_sat_start) & VBM_sat_mask) / 255.0;
 }
 
 int decode_sprite_size(uint encoded) {
-    return int((encoded >> VMB_sprite_size_start) & VBM_sprite_size_mask);
+    return int((encoded >> VBM_sprite_size_start) & VBM_sprite_size_mask);
 }
 
 bool is_AABB(uint enc) {

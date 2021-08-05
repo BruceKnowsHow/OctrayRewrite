@@ -51,9 +51,13 @@ void main() {
         return;
     }
     
-    vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
+    vec4 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0);
     vec3 albedo = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)).rgb * 256.0 / 255.0;
     albedo = pow(albedo, vec3(2.2));
+    
+    if ((int(gbufferEncode.a) & 64) > 0) {
+        albedo = pow(albedo, vec3(1.0 / 2.2)) * 4.0;
+    }
     
     gl_FragData[0].rgb = texelFetch(colortex11, coord, 0).rgb * albedo;
     
