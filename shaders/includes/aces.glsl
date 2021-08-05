@@ -519,7 +519,6 @@ vec3 rrtSweeteners(vec3 ACES2065) {
 
 /* takes input as academy color and returns oces */
 vec3 academyRRT(vec3 ACES2065) {
-    // vec3 ACEScgIn       = rrtSweeteners(ACES2065);
     vec3 ACEScgIn       = ACES2065;
 
     /* Apply tonescale in AP1 ACEScg */

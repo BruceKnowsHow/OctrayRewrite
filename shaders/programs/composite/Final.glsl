@@ -93,6 +93,8 @@ vec4 cubic(float x) {
 	return w / 6.0;
 }
 
+#define ACCUM_GAMMA 2.4
+
 vec3 BicubicTexture(sampler2D tex, vec2 coord) {
 	coord *= viewSize;
 	
@@ -160,10 +162,10 @@ vec3 GetBloom(sampler2D tex, vec3 color) {
 
 
 void main() {
-    vec3 avgCol = pow(textureLod(colortex13, vec2(0.5), 16).rgb, vec3(2.2));
-    float expo = pow(1.0 / (dot(avgCol, vec3(1.0))), 1.0);
+    vec3 avgCol = pow(textureLod(colortex13, vec2(0.5), 16).rgb, vec3(ACCUM_GAMMA));
+    float expo = 1.0 / dot(avgCol, vec3(1.0));
     
-    vec3 diffuse = pow(texture(colortex13, texcoord).rgb, vec3(2.2));
+    vec3 diffuse = pow(texture(colortex13, texcoord).rgb, vec3(ACCUM_GAMMA));
     
     vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
     vec3 albedo = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)).rgb * 256.0 / 255.0;

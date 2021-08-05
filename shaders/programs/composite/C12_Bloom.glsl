@@ -9,6 +9,8 @@ const bool colortex13MipmapEnabled = true;
 
 #define cubesmooth(x) ((x) * (x) * (3.0 - 2.0 * (x)))
 
+#define ACCUM_GAMMA 2.4
+
 vec3 ComputeBloomTile(const float scale, vec2 offset) { // Computes a single bloom tile, the tile's blur level is inversely proportional to its size
 	// Each bloom tile uses (1.0 / scale + pixelSize * 2.0) texcoord-units of the screen
 	
@@ -39,7 +41,7 @@ vec3 ComputeBloomTile(const float scale, vec2 offset) { // Computes a single blo
 			
 			vec2 offset = vec2(i, j) / viewSize;
 			
-			vec4 lookup = pow(textureLod(colortex13, coord + offset, Lod), vec4(vec3(2.2), 1.0));
+			vec4 lookup = pow(textureLod(colortex13, coord + offset, Lod), vec4(vec3(ACCUM_GAMMA), 1.0));
 			
 			bloom       += lookup.rgb * weight;
 			totalWeight += weight;
