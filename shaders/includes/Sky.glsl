@@ -260,6 +260,10 @@ vec3 CalculateNightSky(vec3 wDir) {
 vec3 ComputeTotalSky(vec3 wPos, vec3 wDir, inout vec3 transmit, const bool primary) {
 	vec3 color = vec3(0.0);
 	
+	#ifndef world0
+	return vec3(0.0);
+	#endif
+	
 	// calculateVolumetricClouds(color, transmit, wPos, wDir, sunDirection, vec2(0.0), 1.0, ATMOSPHERE.bottom_radius*1000.0, VC_QUALITY, VC_SUNLIGHT_QUALITY);
 	color += ComputeClouds(wPos, wDir, transmit);
 	color += CalculateNightSky(wDir)*transmit;

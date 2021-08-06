@@ -57,4 +57,8 @@ void DoPBR(vec4 diffuse, vec3 surfaceNormal, vec3 flatNormal, vec4 tex_s, vec3 w
     #ifndef SUNLIGHT_RAYS
         sunRay.absorb *= 0.0;
     #endif
+    
+    #ifndef world0
+        sunRay.absorb *= 0.0;
+    #endif
 }
