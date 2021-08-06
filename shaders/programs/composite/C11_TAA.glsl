@@ -69,19 +69,29 @@ vec3 FastCatmulRom(sampler2D colorTex, vec2 texcoord, vec4 rtMetrics, float shar
 	return color.rgb/color.a;
 }
 
+#define REPROJECT
+
 vec3 calculateTAA() {
-    if (accum && false && dot(vec4(1.0), textureGather(colortex8, texcoord, 2)) < 0.5
-    && unpackUnorm4x8(floatBitsToUint(texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).r)).a < 0.5) {
-        vec3 A = texture(colortex11, texcoord).rgb;
-        vec3 B = pow(texture(colortex13, texcoord).rgb, vec3(ACCUM_GAMMA));
-        return mix(A, B, 0.95);
+    // if (accum && false && dot(vec4(1.0), textureGather(colortex8, texcoord, 2)) < 0.5
+    // && unpackUnorm4x8(floatBitsToUint(texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).r)).a < 0.5) {
+    //     vec3 A = texture(colortex11, texcoord).rgb;
+    //     vec3 B = pow(texture(colortex13, texcoord).rgb, vec3(ACCUM_GAMMA));
+    //     return mix(A, B, 0.95);
+    // }
+    
+    vec3 color = texture(colortex11, texcoord).rgb;
+    
+    #ifndef REPROJECT
+    if (accum) {
+        return mix(pow(texture(colortex13, texcoord).rgb, vec3(ACCUM_GAMMA)), color, TAA_WEIGHT);
+    } else {
+        return color;
     }
+    #endif
     
     float depth = texture(depthtex0, texcoord).x;
     
     vec2 reproject = Reproject(vec3(texcoord, depth)).xy;
-    
-    vec3 color = texture(colortex11, texcoord).rgb;
     
     if (any(greaterThanEqual(abs(reproject - vec2(0.5)), vec2(0.5))))
         return color;
@@ -102,6 +112,7 @@ vec3 calculateTAA() {
     }
     
     vec3 clampedHist = clamp(history, minCol, maxCol);
+    
     float amountClamped = distance(history, clampedHist) / Luminance(history);
     
     float velocityRejection = (0.1 + amountClamped) * clamp(length(velocity * viewSize), 0.0, 1.0);
@@ -117,14 +128,22 @@ void main() {
     ivec2 coord = ivec2(gl_FragCoord.xy);
     float depth = texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).x;
     
+    // vec3(0.2126, 0.7152, 0.0722)
+    
+    vec3 color;
+    
     #ifdef TAA
-        gl_FragData[0].rgb = pow(calculateTAA(), vec3(1.0 / ACCUM_GAMMA));
+        color = pow(calculateTAA(), vec3(1.0 / ACCUM_GAMMA));
     #else
-        gl_FragData[0].rgb = pow(texelFetch(colortex11, coord, 0).rgb, vec3(1.0 / ACCUM_GAMMA));
+        color = pow(texelFetch(colortex11, coord, 0).rgb, vec3(1.0 / ACCUM_GAMMA));
     #endif
     
     vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).rgb;
     
+    // Lowlight eye
+    color = mix(vec3(dot(color, vec3(0.2126, 0.7152, 0.0722))), color, clamp( pow(dot(color, vec3(0.2126, 0.7152, 0.0722)) * 16.0, 2.0)*0.7 + 0.3, 0.0, 1.0));
+    
+    gl_FragData[0].rgb = color;
     gl_FragData[1] = vec4(depth, gbufferEncode.g, unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)).a, 0.0);
     
     exit();

@@ -94,7 +94,8 @@ void main() {
     
     const vec3 kernel = vec3(6.0, 4.0, 1.0);
     
-    float v = max(1.0, diffuseHistory - 32.0);
+    float blurredSamples = mix(32.0, 256.0, clamp(diffuseSigma / diffuseHistory / 16.0, 0.0, 1.0));
+    float v = max(1.0, diffuseHistory - blurredSamples);
     
     const int r = min(1, int(2.0 / log(v)));
     for (int yy = -r; yy <= r; yy++) {
@@ -107,7 +108,7 @@ void main() {
             if (xx == 0 && yy == 0 || outside || depthP >= 1.0)
                 continue;
             
-            vec3  gbufferEncodeP = texelFetch(colortex6, p, 0).rgb;
+            vec3  gbufferEncodeP = texelFetch(colortex6 , p, 0).rgb;
             vec3  diffuseP       = texelFetch(colortex11, p, 0).rgb;
             vec2  momentsP       = texelFetch(colortex10, p, 0).rg;
             vec3  normalP        = DecodeNormal(gbufferEncodeP.g);

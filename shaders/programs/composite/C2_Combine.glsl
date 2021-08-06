@@ -98,6 +98,8 @@ vec3 DecodeNormal(float enc) {
 #ifdef TAA
 #endif
 
+#define REPROJECT
+
 void main() {
     ivec2 coord = ivec2(gl_FragCoord.xy);
     
@@ -152,42 +154,43 @@ void main() {
         moments = texelFetch(colortex10 , ivec2(gl_FragCoord.xy), 0).rg;
         history = texelFetch(colortex10 , ivec2(gl_FragCoord.xy), 0).b;
     } else {
-    // Quad search for reprojected pixels
-    for (int i = 0; i < 4; ++i) {
-        ivec2 coord = ivec2(prevCoord) + offsets[i];
-        
-        vec4  prevData  = texelFetch(colortex8, coord, 0);
-        float prevDepth = prevData.r;
-        
-        bool offscreen = any(greaterThan(coord, viewSize)) || any(lessThan(coord, ivec2(0)));
-        bool isSky     = prevDepth >= 1.0;
-        
-        if (offscreen || isSky)
-            continue;
-        
-        vec3  prevNormal   = DecodeNormal(prevData.g);
-        float prevLinDepth = LinearizeDepth(prevDepth);
-        
-        float distDepth  = abs(LinearizeDepth(reproject.z) - prevLinDepth) * 4.0;
-        float dotNormals = dot(normal, prevNormal);
-        
-        if (distDepth < 2.0 && dotNormals > 0.5) {
-            float wDiff = bilinWeight[i] * dotNormals;
+        #ifdef REPROJECT
+        // Quad search for reprojected pixels
+        for (int i = 0; i < 4; ++i) {
+            ivec2 coord = ivec2(prevCoord) + offsets[i];
             
-            temporalDiffuse += texelFetch(colortex9 , coord, 0).rgb * wDiff;
-            moments         += texelFetch(colortex10, coord, 0).rg  * wDiff;
-            history         += texelFetch(colortex10, coord, 0).b   * wDiff;
+            vec4  prevData  = texelFetch(colortex8, coord, 0);
+            float prevDepth = prevData.r;
             
-            temporalSumDifW += wDiff;
+            bool offscreen = any(greaterThan(coord, viewSize)) || any(lessThan(coord, ivec2(0)));
+            bool isSky     = prevDepth >= 1.0;
+            
+            if (offscreen || isSky)
+                continue;
+            
+            vec3  prevNormal   = DecodeNormal(prevData.g);
+            float prevLinDepth = LinearizeDepth(prevDepth);
+            
+            float distDepth  = abs(LinearizeDepth(reproject.z) - prevLinDepth) * 4.0;
+            float dotNormals = dot(normal, prevNormal);
+            
+            if (distDepth < 2.0 && dotNormals > 0.5) {
+                float wDiff = bilinWeight[i] * dotNormals;
+                
+                temporalDiffuse += texelFetch(colortex9 , coord, 0).rgb * wDiff;
+                moments         += texelFetch(colortex10, coord, 0).rg  * wDiff;
+                history         += texelFetch(colortex10, coord, 0).b   * wDiff;
+                
+                temporalSumDifW += wDiff;
+            }
         }
-    }
-    
-    if (temporalSumDifW > 0.001) {
-        temporalDiffuse /= temporalSumDifW;
-        moments  /= temporalSumDifW;
-        history  /= temporalSumDifW;
-    }
-    
+        
+        if (temporalSumDifW > 0.001) {
+            temporalDiffuse /= temporalSumDifW;
+            moments  /= temporalSumDifW;
+            history  /= temporalSumDifW;
+        }
+        #endif
     }
     
     

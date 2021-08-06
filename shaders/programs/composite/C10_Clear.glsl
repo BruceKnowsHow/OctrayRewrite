@@ -55,11 +55,11 @@ void main() {
     vec3 albedo = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)).rgb * 256.0 / 255.0;
     albedo = pow(albedo, vec3(2.2));
     
-    if ((int(gbufferEncode.a) & 64) > 0) {
-        albedo = pow(albedo, vec3(1.0 / 2.2)) * 4.0;
-    }
-    
     gl_FragData[0].rgb = texelFetch(colortex11, coord, 0).rgb * albedo;
+    
+    if ((int(gbufferEncode.a) & 64) > 0 && int(gbufferEncode.a) != 250) {
+        gl_FragData[0].rgb += albedo;
+    }
     
     exit();
 }

@@ -289,7 +289,7 @@ void main()  {
             
             vec3 diffuse2 = pow(diffuse.rgb, vec3(1.0));
             diffuse2 *= HSVtoRGB(vec3(hue, sat, 1.0));
-            WriteColor(curr.absorb * diffuse2.rgb, curr.screenCoord);
+            WriteColor(curr.absorb * diffuse2.rgb * 4.0, curr.screenCoord);
         }
         
         if (GetRayDepth(curr) >= MAX_LIGHT_BOUNCES)
@@ -299,13 +299,13 @@ void main()  {
         //     show(diffuse);
         //     exitCoord(curr.screenCoord);
         // }
-        if (diffuse.a <= 0.1) {
+        if (diffuse.a <= 0.1) { // Stencil
             // curr.info |= STENCIL_RAY_TYPE;
             // curr.voxelPos = VIO.voxelPos - VIO.plane * exp2(-12);
             // WriteRay(qBack, curr);
             
             // continue;
-        } else if (diffuse.a < 1.0) {
+        } else if (diffuse.a < 1.0) { // Translucent
             // continue;
         } else if (tex_n.a < 1.0) {
             // if (!(IsPrimaryRay(curr) || IsSpecularRay(curr))) continue;
