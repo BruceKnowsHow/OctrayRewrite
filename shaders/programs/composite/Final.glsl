@@ -58,11 +58,11 @@ uniform int hideGUI;
 const bool colortex13MipmapEnabled = true;
 const bool colortex14MipmapEnabled = true;
 
-#if (defined MC_RENDER_QUALITY)
-vec2 texcoord = gl_FragCoord.xy / viewSize * MC_RENDER_QUALITY;
-#else
-vec2 texcoord = gl_FragCoord.xy / viewSize;
+#if (!defined MC_RENDER_QUALITY)
+    const float MC_RENDER_QUALITY = 1.0;
 #endif
+
+vec2 texcoord = gl_FragCoord.xy / viewSize * MC_RENDER_QUALITY;
 
 #include "../../includes/debug.glsl"
 
