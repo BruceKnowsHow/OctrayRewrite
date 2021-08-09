@@ -64,11 +64,10 @@ void main() {
     
     float fog_amount = clamp(length(worldPos) / max(16.0 * 16.0, far), 0.0, 1.0);
     
-    #ifdef worldn1
-    gl_FragData[0].rgb = mix(gl_FragData[0].rgb, GetFogColor(worldDir), fog_amount);
-    #else
-    gl_FragData[0].rgb += GetFogColor(worldDir) * fog_amount;
-    #endif
+    if (is_nether)
+        gl_FragData[0].rgb = mix(gl_FragData[0].rgb, GetFogColor(worldDir), fog_amount);
+    else
+        gl_FragData[0].rgb += GetFogColor(worldDir) * fog_amount;
     
     
     exit();

@@ -94,7 +94,7 @@ void main() {
     
     const vec3 kernel = vec3(6.0, 4.0, 1.0);
     
-    float blurredSamples = mix(32.0, 256.0, clamp(diffuseSigma / diffuseHistory / 16.0, 0.0, 1.0));
+    float blurredSamples = mix(32.0, 128.0, clamp(diffuseSigma / diffuseHistory / 16.0, 0.0, 1.0));
     float v = max(1.0, diffuseHistory - blurredSamples);
     
     const int r = min(1, int(2.0 / log(v)));

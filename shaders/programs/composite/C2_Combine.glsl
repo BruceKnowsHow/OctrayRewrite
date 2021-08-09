@@ -129,7 +129,7 @@ void main() {
     
     float linDepth = LinearizeDepth(depth);
     
-    vec3 reproject = Reproject(vec3(texcoord - TAAHash(), depth));
+    vec3 reproject = Reproject(vec3(texcoord, depth));
     
     reproject.xy += taaPrevJitter * 0.5;
     

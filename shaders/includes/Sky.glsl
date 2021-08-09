@@ -260,13 +260,11 @@ vec3 CalculateNightSky(vec3 wDir) {
 #define SKY_PRIMARY_BRIGHTNESS 0.25
 
 vec3 GetFogColor(vec3 wDir) {
-	#ifdef world1
-	return vec3(0.0, 0.002, 0.005) * 0.1;
-	#endif
+	if (is_end)
+		return vec3(0.0, 0.002, 0.005) * 0.1;
 	
-	#ifdef worldn1
-	return vec3(0.02, 0.0, 0.0);
-	#endif
+	if (is_nether)
+		return vec3(0.02, 0.0, 0.0);
 	
 	return vec3(0.0);
 }
@@ -274,13 +272,11 @@ vec3 GetFogColor(vec3 wDir) {
 vec3 ComputeTotalSky(vec3 wPos, vec3 wDir, inout vec3 transmit, bool primary) {
 	vec3 color = vec3(0.0);
 	
-	#ifdef world1
-	return vec3(max(vec3(0.0),   pow(vec3(max(vec3(0.0),   vec3(normalize(wDir+vec3(-0.2,0,0)).z, normalize(wDir+vec3(0,0,0.0)).z, normalize(wDir+vec3(0.2,0,0)).z)            )), vec3(50, 50, 50)*1.1)  ));
-	#endif
+	if (is_end)
+		return vec3(max(vec3(0.0),   pow(vec3(max(vec3(0.0),   vec3(normalize(wDir+vec3(-0.2,0,0)).z, normalize(wDir+vec3(0,0,0.0)).z, normalize(wDir+vec3(0.2,0,0)).z)            )), vec3(50, 50, 50)*1.1)  ));
 	
-	#ifndef world0
-	return vec3(0.0);
-	#endif
+	if (!is_overworld)
+		return vec3(0.0);
 	
 	// calculateVolumetricClouds(color, transmit, wPos, wDir, sunDirection, vec2(0.0), 1.0, ATMOSPHERE.bottom_radius*1000.0, VC_QUALITY, VC_SUNLIGHT_QUALITY);
 	color += ComputeClouds(wPos, wDir, transmit);

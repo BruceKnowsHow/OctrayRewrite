@@ -136,13 +136,20 @@ vec3 GetBloomTile(sampler2D tex, const int scale, vec2 offset) {
 }
 
 #define BLOOM
-#define BLOOM_AMOUNT 0.1
-#define BLOOM_CURVE 1.0
+
+#ifdef BLOOM
+	const bool do_bloom = true;
+#else
+	const bool do_bloom = false;
+#endif
+
+#define BXLOOM_AMOUNT 0.1
+#define BXLOOM_CURVE 1.0
 
 vec3 GetBloom(sampler2D tex, vec3 color) {
-	#ifndef BLOOM
+	if (!do_bloom)
 		return color;
-	#endif
+	
 	vec3 bloom[8];
 	
 	// These arguments should be identical to those in composite2.fsh
@@ -161,7 +168,7 @@ vec3 GetBloom(sampler2D tex, vec3 color) {
 	
 	bloom[0] /= 7.0;
 	
-	float bloom_amount = BLOOM_AMOUNT;
+	float bloom_amount = BXLOOM_AMOUNT;
 	
 	#ifdef world1
 	bloom_amount = 0.3;
@@ -170,7 +177,7 @@ vec3 GetBloom(sampler2D tex, vec3 color) {
 	bloom_amount = 0.5;
 	#endif
 	
-	return mix(color, min(pow(bloom[0], vec3(BLOOM_CURVE)), bloom[0]), bloom_amount);
+	return mix(color, min(pow(bloom[0], vec3(BXLOOM_CURVE)), bloom[0]), bloom_amount);
 }
 /***********************************************************************/
 

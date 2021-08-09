@@ -12,12 +12,14 @@ uniform vec3 cameraPosition;
 uniform vec3 previousCameraPosition;
 uniform vec2 viewSize;
 uniform float frameTimeCounter;
+uniform int frameCounter;
 uniform float far;
 uniform bool accum;
 
 vec2 texcoord = gl_FragCoord.xy / viewSize;
 
 #include "../../includes/debug.glsl"
+#include "../../includes/Random.glsl"
 
 #define ACCUM_GAMMA 2.4
 
@@ -38,8 +40,8 @@ float Luminance(vec3 x) {
     return dot(x, vec3(0.2126, 0.7152, 0.0722));
 }
 
-#define TAA_WEIGHT 0.05
-#define TAA_SHARPNESS 0.85
+#define TXAA_WEIGHT 0.05
+#define TXAA_SHARPNESS 0.85
 
 vec3 FastCatmulRom(sampler2D colorTex, vec2 texcoord, vec4 rtMetrics, float sharpenAmount) {
     vec2 position = rtMetrics.zw * texcoord;
@@ -70,6 +72,11 @@ vec3 FastCatmulRom(sampler2D colorTex, vec2 texcoord, vec4 rtMetrics, float shar
 }
 
 #define REPROJECT
+#ifdef REPROJECT
+    const bool do_reproject = true;
+#else
+    const bool do_reproject = false;
+#endif
 
 vec3 calculateTAA(inout float history) {
     if (accum && dot(vec4(1.0), textureGather(colortex8, texcoord, 2)) < 0.5
@@ -84,9 +91,8 @@ vec3 calculateTAA(inout float history) {
     
     vec3 color = texture(colortex11, texcoord).rgb;
     
-    #ifndef REPROJECT
-    return color;
-    #endif
+    if (!do_reproject)
+        return color;
     
     float depth = texture(depthtex0, texcoord).x;
     
@@ -97,7 +103,7 @@ vec3 calculateTAA(inout float history) {
     
     vec2 velocity = reproject.xy - texcoord;
     
-    vec3 prevColor = max(FastCatmulRom(colortex13, reproject, vec4(1.0/viewSize, viewSize), TAA_SHARPNESS).rgb, 0.0);
+    vec3 prevColor = max(FastCatmulRom(colortex13, reproject, vec4(1.0/viewSize, viewSize), TXAA_SHARPNESS).rgb, 0.0);
     
     vec3 minCol = vec3( 10000000000.0);
     vec3 maxCol = vec3(-10000000000.0);
@@ -116,7 +122,7 @@ vec3 calculateTAA(inout float history) {
     
     float velocityRejection = (0.1 + amountClamped) * clamp(length(velocity * viewSize), 0.0, 1.0);
     
-    return mix(clampedHist, color, clamp(TAA_WEIGHT + velocityRejection, 0.0, 1.0));
+    return mix(clampedHist, color, clamp(TXAA_WEIGHT + velocityRejection, 0.0, 1.0));
 }
 
 #define TAA
