@@ -34,6 +34,11 @@ const bool colortex10Clear = false;
 const bool colortex13Clear = false;
 */
 
+// #define FRUSTUM_CULLING
+
+#ifdef FRUSTUM_CULLING
+#endif
+
 layout (r32ui) uniform uimage2D colorimg2;
 
 uniform sampler2D colortex13;
@@ -156,9 +161,20 @@ vec3 GetBloom(sampler2D tex, vec3 color) {
 	
 	bloom[0] /= 7.0;
 	
-	return mix(color, min(pow(bloom[0], vec3(BLOOM_CURVE)), bloom[0]), BLOOM_AMOUNT);
+	float bloom_amount = BLOOM_AMOUNT;
+	
+	#ifdef world1
+	bloom_amount = 0.3;
+	#endif
+	#ifdef worldn1
+	bloom_amount = 0.5;
+	#endif
+	
+	return mix(color, min(pow(bloom[0], vec3(BLOOM_CURVE)), bloom[0]), bloom_amount);
 }
 /***********************************************************************/
+
+#define EXPOSURE 0.00 // [-2.00 -1.66 -1.33 -1.00 -0.66 -0.33 0.00 0.33 0.66 1.00 1.33 1.66 2.00]
 
 
 void main() {
@@ -176,6 +192,7 @@ void main() {
     vec3 color = diffuse;
     color = GetBloom(colortex14, color);
     color *= min(expo, 1000.0);
+    color *= exp2(EXPOSURE);
     
     color = ACES_AP1_SRGB_RRT(color);
     // WhiteBalance(color);

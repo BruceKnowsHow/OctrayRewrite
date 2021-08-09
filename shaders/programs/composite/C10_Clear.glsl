@@ -37,15 +37,15 @@ void main() {
     
     float depth = texelFetch(depthtex0, coord, 0).x;
     
+    vec3 worldPos = GetWorldSpacePosition(texcoord, depth);
+    
+    vec3 worldDir = normalize(worldPos);
+    vec3 absorb = vec3(1.0);
+    
+    vec3 skyColor = ComputeTotalSky(vec3(0.0), worldDir, absorb, true) * SKY_PRIMARY_BRIGHTNESS + GetFogColor(worldDir);
+    
     if (depth >= 1.0) {
-        vec3 worldPos = GetWorldSpacePosition(texcoord, depth);
-        vec3 worldDir = normalize(worldPos);
-        vec3 absorb = vec3(1.0);
-        
-        #define SKY_PRIMARY_BRIGHTNESS 0.25
-        vec3 color = ComputeTotalSky(vec3(0.0), worldDir, absorb, true) * SKY_PRIMARY_BRIGHTNESS;
-        
-        gl_FragData[0] = vec4(color, 0.0);
+        gl_FragData[0] = vec4(skyColor, 0.0);
         gl_FragData[1] = vec4(0.0);
         exit();
         return;
@@ -60,6 +60,16 @@ void main() {
     if ((int(gbufferEncode.a) & 64) > 0 && int(gbufferEncode.a) != 250) {
         gl_FragData[0].rgb += albedo;
     }
+    
+    
+    float fog_amount = clamp(length(worldPos) / max(16.0 * 16.0, far), 0.0, 1.0);
+    
+    #ifdef worldn1
+    gl_FragData[0].rgb = mix(gl_FragData[0].rgb, GetFogColor(worldDir), fog_amount);
+    #else
+    gl_FragData[0].rgb += GetFogColor(worldDir) * fog_amount;
+    #endif
+    
     
     exit();
 }

@@ -71,22 +71,21 @@ vec3 FastCatmulRom(sampler2D colorTex, vec2 texcoord, vec4 rtMetrics, float shar
 
 #define REPROJECT
 
-vec3 calculateTAA() {
-    // if (accum && false && dot(vec4(1.0), textureGather(colortex8, texcoord, 2)) < 0.5
-    // && unpackUnorm4x8(floatBitsToUint(texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).r)).a < 0.5) {
-    //     vec3 A = texture(colortex11, texcoord).rgb;
-    //     vec3 B = pow(texture(colortex13, texcoord).rgb, vec3(ACCUM_GAMMA));
-    //     return mix(A, B, 0.95);
-    // }
+vec3 calculateTAA(inout float history) {
+    if (accum && dot(vec4(1.0), textureGather(colortex8, texcoord, 2)) < 0.5
+    && unpackUnorm4x8(floatBitsToUint(texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0).r)).a < 0.5) {
+        
+        vec4 curr = texture(colortex11, texcoord);
+        vec4 prev = pow(texture(colortex13, texcoord), vec4(vec3(ACCUM_GAMMA), 1.0));
+        
+        history = prev.a + 1.0;
+        return mix(prev.rgb, curr.rgb, 1.0 / history);
+    }
     
     vec3 color = texture(colortex11, texcoord).rgb;
     
     #ifndef REPROJECT
-    if (accum) {
-        return mix(pow(texture(colortex13, texcoord).rgb, vec3(ACCUM_GAMMA)), color, TAA_WEIGHT);
-    } else {
-        return color;
-    }
+    return color;
     #endif
     
     float depth = texture(depthtex0, texcoord).x;
@@ -98,7 +97,7 @@ vec3 calculateTAA() {
     
     vec2 velocity = reproject.xy - texcoord;
     
-    vec3 history = max(FastCatmulRom(colortex13, reproject, vec4(1.0/viewSize, viewSize), TAA_SHARPNESS).rgb, 0.0);
+    vec3 prevColor = max(FastCatmulRom(colortex13, reproject, vec4(1.0/viewSize, viewSize), TAA_SHARPNESS).rgb, 0.0);
     
     vec3 minCol = vec3( 10000000000.0);
     vec3 maxCol = vec3(-10000000000.0);
@@ -111,9 +110,9 @@ vec3 calculateTAA() {
         }
     }
     
-    vec3 clampedHist = clamp(history, minCol, maxCol);
+    vec3 clampedHist = clamp(prevColor, minCol, maxCol);
     
-    float amountClamped = distance(history, clampedHist) / Luminance(history);
+    float amountClamped = distance(prevColor, clampedHist) / Luminance(prevColor);
     
     float velocityRejection = (0.1 + amountClamped) * clamp(length(velocity * viewSize), 0.0, 1.0);
     
@@ -131,9 +130,10 @@ void main() {
     // vec3(0.2126, 0.7152, 0.0722)
     
     vec3 color;
+    float history = 1.0;
     
     #ifdef TAA
-        color = pow(calculateTAA(), vec3(1.0 / ACCUM_GAMMA));
+        color = pow(calculateTAA(history), vec3(1.0 / ACCUM_GAMMA));
     #else
         color = pow(texelFetch(colortex11, coord, 0).rgb, vec3(1.0 / ACCUM_GAMMA));
     #endif
@@ -145,7 +145,7 @@ void main() {
     color = mix(vec3(dot(color, vec3(0.2126, 0.7152, 0.0722))), color, clamp( pow(dot(color, vec3(0.2126, 0.7152, 0.0722)) * 16.0, 2.0)*0.7 + 0.3, 0.0, 1.0));
     #endif
     
-    gl_FragData[0].rgb = color;
+    gl_FragData[0] = vec4(color, history);
     gl_FragData[1] = vec4(depth, gbufferEncode.g, unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)).a, 0.0);
     
     exit();

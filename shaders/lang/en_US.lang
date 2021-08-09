@@ -8,6 +8,11 @@ option.SPECULAR_RAYS=Reflection Rays
 option.ANY_ATROUS_FILTER=Spatial Blur Filter
 option.REPROJECT=Temporal Filter
 
+
+screen.Color=Color Correction
+option.EXPOSURE=Exposure
+
+
 screen.Effects=Post Effects
 
 option.BLOOM=Bloom

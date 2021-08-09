@@ -16,11 +16,13 @@ uniform vec2 taaJitter;
 uniform vec2 taaPrevJitter;
 uniform float far;
 uniform bool accum;
+uniform int frameCounter;
 
 vec2 texcoord = (gl_FragCoord.xy + vec2(0.5)) / viewSize;
 
 #include "../../includes/debug.glsl"
 #include "../../includes/Voxelization.glsl"
+#include "../../includes/Random.glsl"
 
 
 // Atomic color read
@@ -119,13 +121,15 @@ void main() {
     vec3 normal = DecodeNormal(gbufferEncode.g);
     
     albedo = pow(albedo, vec3(2.2));
-    diffuse /= max(albedo, vec3(0.001));
+    
+    diffuse = mix(diffuse, diffuse / max(albedo, vec3(0.004)), greaterThan(albedo, vec3(10.0 / 255.0)));
+    
     
     float diffuseLum = Luminance(diffuse);
     
     float linDepth = LinearizeDepth(depth);
     
-    vec3 reproject = Reproject(vec3(texcoord - taaJitter * 0.5, depth));
+    vec3 reproject = Reproject(vec3(texcoord - TAAHash(), depth));
     
     reproject.xy += taaPrevJitter * 0.5;
     

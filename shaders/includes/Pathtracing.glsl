@@ -1,7 +1,15 @@
+#define AMBIENT_RAYS
+#define SUNLIGHT_RAYS
+// #define SPECULAR_RAYS
+
 void DoPBR(vec4 diffuse, vec3 surfaceNormal, vec3 flatNormal, vec4 tex_s, vec3 worldDir,
                   inout RayStruct specRay, inout RayStruct ambRay, inout RayStruct sunRay)
 {
     bool isMetal = tex_s.g > 229.5/255.0;
+    
+    #ifndef SPECULAR_RAYS
+    isMetal = false;
+    #endif
     
     float roughness = pow(1.0 - tex_s.r, 2.0);
     vec3 F0 = (isMetal) ? diffuse.rgb : vec3(tex_s.g);
@@ -41,10 +49,6 @@ void DoPBR(vec4 diffuse, vec3 surfaceNormal, vec3 flatNormal, vec4 tex_s, vec3 w
     sunRay.worldDir = normalize(ArbitraryTBN(sunDirection)*CalculateConeVector(RandNextF(), radians(1.0), 32));
     sunRay.absorb *= max(0.0, dot(sunRay.worldDir, surfaceNormal)) * mix(vec3(1.0), kD, isMetal);
     sunRay.absorb *= float(dot(sunRay.worldDir, flatNormal) > 0.0);
-    
-    #define AMBIENT_RAYS
-    #define SUNLIGHT_RAYS
-    // #define SPECULAR_RAYS
     
     #ifndef AMBIENT_RAYS
         ambRay.absorb *= 0.0;

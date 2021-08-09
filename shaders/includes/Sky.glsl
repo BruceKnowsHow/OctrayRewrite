@@ -204,7 +204,7 @@ float triNoise2d(in vec2 p, float spd)
     return clamp(1./pow(rz*29., 1.3),0.,.55);
 }
 
-vec3 ComputeFarSpace(vec3 wDir, vec3 transmit, const bool primary) {
+vec3 ComputeFarSpace(vec3 wDir, vec3 transmit, bool primary) {
 	// return vec3(0.0);
 	
 	vec2 coord = wDir.xz * (2.5 * STAR_SCALE * (2.0 - wDir.y));
@@ -236,7 +236,7 @@ vec3 ComputeClouds(vec3 wPos, vec3 wDir, inout vec3 transmit) {
 	return color;
 }
 
-vec3 ComputeBackSky(vec3 wPos, vec3 wDir, inout vec3 transmit, const bool primary) {
+vec3 ComputeBackSky(vec3 wPos, vec3 wDir, inout vec3 transmit, bool primary) {
 	vec3 color = vec3(0.0);
 	
 	vec3 myvec;
@@ -257,8 +257,26 @@ vec3 CalculateNightSky(vec3 wDir) {
 	return nightSkyColor * value;
 }
 
-vec3 ComputeTotalSky(vec3 wPos, vec3 wDir, inout vec3 transmit, const bool primary) {
+#define SKY_PRIMARY_BRIGHTNESS 0.25
+
+vec3 GetFogColor(vec3 wDir) {
+	#ifdef world1
+	return vec3(0.0, 0.002, 0.005) * 0.1;
+	#endif
+	
+	#ifdef worldn1
+	return vec3(0.02, 0.0, 0.0);
+	#endif
+	
+	return vec3(0.0);
+}
+
+vec3 ComputeTotalSky(vec3 wPos, vec3 wDir, inout vec3 transmit, bool primary) {
 	vec3 color = vec3(0.0);
+	
+	#ifdef world1
+	return vec3(max(vec3(0.0),   pow(vec3(max(vec3(0.0),   vec3(normalize(wDir+vec3(-0.2,0,0)).z, normalize(wDir+vec3(0,0,0.0)).z, normalize(wDir+vec3(0.2,0,0)).z)            )), vec3(50, 50, 50)*1.1)  ));
+	#endif
 	
 	#ifndef world0
 	return vec3(0.0);

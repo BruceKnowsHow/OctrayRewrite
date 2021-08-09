@@ -20,8 +20,10 @@ uniform vec2 taaJitter;
 uniform vec2 viewSize;
 uniform float far;
 uniform float frameTimeCounter;
+uniform int frameCounter;
 
 #include "../../includes/Voxelization.glsl"
+#include "../../includes/Random.glsl"
 
 layout (r32ui) uniform uimage2D voxel_data_img;
 
@@ -61,7 +63,7 @@ void main() {
     viewPos     = (gbufferModelView * vec4(worldPos, 1.0)).xyz;
     
     gl_Position = gbufferProjection * vec4(viewPos, 1.0);
-    gl_Position.xy += taaJitter * gl_Position.w;
+    gl_Position.xy += TAAHash() * gl_Position.w;
     
     viewPos = (gbufferModelViewInverse * (gl_ModelViewMatrix * gl_Vertex)).xyz;
     
@@ -136,7 +138,7 @@ void main() {
     if (!is_voxelized(blockID[0]))
         return;
     
-    vec3 triCentroid = (worldPos[0] + worldPos[1] + worldPos[2]) / 3.0 - tanMat[0][2] / 1024.0;
+    vec3 triCentroid = (worldPos[0] + worldPos[1] + worldPos[2]) / 3.0 - tanMat[0][2] / 32.0;
     
     
     // Subvoxel culling section.

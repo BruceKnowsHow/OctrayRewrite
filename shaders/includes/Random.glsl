@@ -31,6 +31,7 @@ vec2 WangHash(uvec2 seed) {
     return vec2(seed) / 4294967296.0;
 }
 
+#ifdef RAND_SEED
 uint randState = Triple32(RAND_SEED);
 uint RandNext() { return randState = Triple32(randState); }
 uvec2 RandNext2() { return uvec2(RandNext(), RandNext()); }
@@ -40,9 +41,24 @@ float RandNextF() { return float(RandNext()) / float(0xffffffffu); }
 vec2 RandNext2F() { return vec2(RandNext2()) / float(0xffffffffu); }
 vec3 RandNext3F() { return vec3(RandNext3()) / float(0xffffffffu); }
 vec4 RandNext4F() { return vec4(RandNext4()) / float(0xffffffffu); }
+#endif
 
 float RandF (uint  seed) { return float(Triple32(seed))                    / float(0xffffffffu); }
 vec2  Rand2F(uvec2 seed) { return vec2(Triple32(seed.x), Triple32(seed.y)) / float(0xffffffffu); }
+
+#define TAA
+
+vec2 TAAHash() {
+	return ((Rand2F(uvec2((frameCounter+2)*2, (frameCounter+2)*2 + 1)) - 0.5) / viewSize) * 2.0;
+}
+
+vec2 TAAPrevHash() {
+	return ((Rand2F(uvec2((frameCounter+1)*2, (frameCounter+1)*2 + 1)) - 0.5) / viewSize) * 2.0;
+}
+
+#ifndef TAA
+	#define TAAHash() vec2(0.0)
+#endif
 
 vec3 CalculateConeVector(const float i, const float angularRadius, const int steps) {
     float x = i * 2.0 - 1.0;
