@@ -163,7 +163,7 @@ uint get_sparse_voxel_addr(uint chunk_addr, ivec3 voxelPos, int lod) {
     return chunk_addr * chunk_mem_size + get_sub_chunk_addr(voxelPos, lod);
 }
 
-const uint upper_lod_buffer_start = uint(chunk_addr_buffer_start - 1) - get_lod_base_addr(5);
+uint upper_lod_buffer_start = uint(chunk_addr_buffer_start - 1) - get_lod_base_addr(5);
 
 ivec2 get_sparse_voxel_coord(uint chunk_addr, ivec3 voxelPos, int lod) {
     uint sparse_voxel_addr;

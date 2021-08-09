@@ -171,8 +171,8 @@ int PackAABB(vec3 minBounds, vec3 maxBounds) {
 }
 
 AABB unpack_AABB(int data) {
-    ivec3 b0 = (data >> ivec3(0, 5, 10)) & ((1 << 5) - 1);
-    ivec3 b1 = (data >> ivec3(15, 20, 25)) & ((1 << 5) - 1);
+    ivec3 b0 = (ivec3(data) >> ivec3(0, 5, 10)) & ivec3((1 << 5) - 1);
+    ivec3 b1 = (ivec3(data) >> ivec3(15, 20, 25)) & ivec3((1 << 5) - 1);
     
     AABB aabb;
     aabb.minBounds = vec3(b0) / 16.0;
@@ -180,7 +180,7 @@ AABB unpack_AABB(int data) {
     return aabb;
 }
 
-const ivec4 bounds[6] = ivec4[6](
+ivec4 bounds[6] = ivec4[6](
     ivec4( PackAABB(vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0)),
            PackAABB(vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0)),
            PackAABB(vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0)),
