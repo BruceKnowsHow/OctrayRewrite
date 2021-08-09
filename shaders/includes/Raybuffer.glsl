@@ -85,36 +85,36 @@ const ivec2 raybuffer_front = ivec2(1, 0);
 uint GetRayDepth(RayStruct ray) { return ray.info & RAY_DEPTH_MASK; }
 
 uint RaybufferReadWarp(ivec2 index) {
-    uint first_thread = findLSB(uint(activeThreadsNV()));
+    uint first_thread = findLSB(uint(ballotARB(true)));
     
     uint addr = 0;
     
-    if (gl_ThreadInWarpNV == first_thread) {
+    if (gl_SubGroupInvocationARB == first_thread) {
         addr = imageLoad(colorimg3, index).x;
     }
     
-    return shuffleNV(addr, first_thread, 32);
+    return readFirstInvocationARB(addr);
 }
 
 uint RaybufferIncrementWarp(const ivec2 index) {
-    uint liveMask  = uint(activeThreadsNV());
+    uint liveMask  = uint(ballotARB(true));
     uint liveCount = bitCount(liveMask);
     
-    uint prefixSum = bitCount(liveMask & ((1 << gl_ThreadInWarpNV) - 1));
+    uint prefixSum = bitCount(liveMask & ((1 << gl_SubGroupInvocationARB) - 1));
     
     uint first_thread = findLSB(liveMask);
     uint second_thread = findLSB(liveMask & (~(1<<first_thread)));
-    ivec2 offset = index - ivec2(0, int(gl_ThreadInWarpNV == int(second_thread)));
+    ivec2 offset = index - ivec2(0, int(gl_SubGroupInvocationARB == int(second_thread)));
     
     uint rayAlloc = liveCount;
     
     uint addr = 0;
     
-    if (gl_ThreadInWarpNV == first_thread) {
+    if (gl_SubGroupInvocationARB == first_thread) {
         addr = imageAtomicAdd(colorimg3, offset, rayAlloc);
     }
     
-    addr = shuffleNV(addr, first_thread, 32) + prefixSum;
+    addr = readFirstInvocationARB(addr) + prefixSum;
     
     return addr;
 }
@@ -132,10 +132,10 @@ const uint page_capacity = (1024) << 6;
 const uint page_overflow = 3;
 
 uint RaybufferPushWarp1() {
-    uint liveMask  = uint(activeThreadsNV());
+    uint liveMask  = uint(ballotARB(true));
     uint liveCount = bitCount(liveMask);
     
-    uint prefixSum = bitCount(liveMask & ((1 << gl_ThreadInWarpNV) - 1));
+    uint prefixSum = bitCount(liveMask & ((1 << gl_SubGroupInvocationARB) - 1));
     
     uint first_thread = findLSB(liveMask);
     uint second_thread = findLSB(liveMask & (~(1<<first_thread)));
@@ -147,7 +147,7 @@ uint RaybufferPushWarp1() {
     
     uint ovrflw = (page_capacity << page_overflow)-1;
     
-    if (gl_ThreadInWarpNV == first_thread) {
+    if (gl_SubGroupInvocationARB == first_thread) {
         int i = 0;
         while (i++ < 1024 && (((addr = imageAtomicAdd(colorimg3, page_back, rayAlloc))&ovrflw) >= page_capacity)) {}
         
@@ -160,14 +160,14 @@ uint RaybufferPushWarp1() {
         addr = ((addr & (~ovrflw)) >> page_overflow) | (addr & (page_capacity-1));
     }
     
-    return shuffleNV(addr, first_thread, 32) + prefixSum;
+    return readFirstInvocationARB(addr) + prefixSum;
     
     
-    if (gl_ThreadInWarpNV == first_thread) {
+    if (gl_SubGroupInvocationARB == first_thread) {
         addr = imageAtomicAdd(colorimg3, raybuffer_back, rayAlloc);
     }
     
-    addr = shuffleNV(addr, first_thread, 32) + prefixSum;
+    addr = readFirstInvocationARB(addr) + prefixSum;
     
     return addr;
 }

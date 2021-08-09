@@ -84,7 +84,7 @@ void Something(vec3 voxelPos, uint packedVoxelData, vec4 diffuse, ivec2 texel_co
     uint rayCount = uint(RayIsVisible(specRay)) + uint(RayIsVisible(ambRay)) + uint(RayIsVisible(sunRay));
     if (rayCount == 0) return;
     
-    if (uint(activeThreadsNV()) == uint(~0)) {
+    if (uint(ballotARB(true)) == uint(~0)) {
         fetch = false;
         
         if (RayIsVisible(specRay)) {
