@@ -85,6 +85,9 @@ const ivec2 raybuffer_front = ivec2(1, 0);
 uint GetRayDepth(RayStruct ray) { return ray.info & RAY_DEPTH_MASK; }
 
 uint RaybufferReadWarp(ivec2 index) {
+    uint ret;
+    
+#   if (defined MC_GL_VENDOR_NVIDIA)
     uint first_thread = findLSB(uint(ballotARB(true)));
     
     uint addr = 0;
@@ -93,30 +96,37 @@ uint RaybufferReadWarp(ivec2 index) {
         addr = imageLoad(colorimg3, index).x;
     }
     
-    return readFirstInvocationARB(addr);
+    ret = readFirstInvocationARB(addr);
+#   else
+    ret = imageLoad(colorimg3, index).x;
+#   endif
+    
+    return ret;
 }
 
 uint RaybufferIncrementWarp(const ivec2 index) {
+    uint ret;
+    
+#   if (defined MC_GL_VENDOR_NVIDIA)
     uint liveMask  = uint(ballotARB(true));
     uint liveCount = bitCount(liveMask);
     
     uint prefixSum = bitCount(liveMask & ((1 << gl_SubGroupInvocationARB) - 1));
     
     uint first_thread = findLSB(liveMask);
-    uint second_thread = findLSB(liveMask & (~(1<<first_thread)));
-    ivec2 offset = index - ivec2(0, int(gl_SubGroupInvocationARB == int(second_thread)));
-    
-    uint rayAlloc = liveCount;
     
     uint addr = 0;
     
     if (gl_SubGroupInvocationARB == first_thread) {
-        addr = imageAtomicAdd(colorimg3, offset, rayAlloc);
+        addr = imageAtomicAdd(colorimg3, index, liveCount);
     }
     
-    addr = readFirstInvocationARB(addr) + prefixSum;
+    ret = readFirstInvocationARB(addr) + prefixSum;
+#   else
+    ret = imageAtomicAdd(colorimg3, index, 1);
+#   endif
     
-    return addr;
+    return ret;
 }
 
 uint RaybufferPushWarp() {
@@ -125,51 +135,6 @@ uint RaybufferPushWarp() {
 
 uint RaybufferPopWarp() {
     return RaybufferIncrementWarp(raybuffer_front);
-}
-
-ivec2 page_back = ivec2(2, 0);
-const uint page_capacity = (1024) << 6;
-const uint page_overflow = 3;
-
-uint RaybufferPushWarp1() {
-    uint liveMask  = uint(ballotARB(true));
-    uint liveCount = bitCount(liveMask);
-    
-    uint prefixSum = bitCount(liveMask & ((1 << gl_SubGroupInvocationARB) - 1));
-    
-    uint first_thread = findLSB(liveMask);
-    uint second_thread = findLSB(liveMask & (~(1<<first_thread)));
-    
-    uint rayAlloc = liveCount;
-    
-    uint addr = 0;
-    
-    
-    uint ovrflw = (page_capacity << page_overflow)-1;
-    
-    if (gl_SubGroupInvocationARB == first_thread) {
-        int i = 0;
-        while (i++ < 1024 && (((addr = imageAtomicAdd(colorimg3, page_back, rayAlloc))&ovrflw) >= page_capacity)) {}
-        
-        if ((addr&ovrflw)+rayAlloc >= page_capacity) {
-            addr = (imageAtomicAdd(colorimg3, raybuffer_back, page_capacity)+page_capacity) << page_overflow;
-            
-            imageAtomicExchange(colorimg3, page_back, addr+rayAlloc);
-        }
-        
-        addr = ((addr & (~ovrflw)) >> page_overflow) | (addr & (page_capacity-1));
-    }
-    
-    return readFirstInvocationARB(addr) + prefixSum;
-    
-    
-    if (gl_SubGroupInvocationARB == first_thread) {
-        addr = imageAtomicAdd(colorimg3, raybuffer_back, rayAlloc);
-    }
-    
-    addr = readFirstInvocationARB(addr) + prefixSum;
-    
-    return addr;
 }
 
 const ivec2 ray_buffer_dims = ivec2(16384, 4096);
