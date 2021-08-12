@@ -46,7 +46,7 @@ uniform usampler2D sky_tex;
 
 void Something(vec3 voxelPos, uint packedVoxelData, vec4 diffuse, ivec2 texel_coord,
                vec4 tex_n, vec3 plane, inout RayStruct curr, inout uint qFront, inout uint qBack,
-               inout int queue_size, inout bool fetch, const uint flag) {
+               inout int queue_size, inout int fetch, const uint flag) {
     // Create the new rays
     float hue = decode_hue(packedVoxelData);
     float sat = decode_sat(packedVoxelData);
@@ -83,8 +83,9 @@ void Something(vec3 voxelPos, uint packedVoxelData, vec4 diffuse, ivec2 texel_co
     uint rayCount = uint(RayIsVisible(specRay)) + uint(RayIsVisible(ambRay)) + uint(RayIsVisible(sunRay));
     if (rayCount == 0) return;
     
+#   if (defined MC_GL_VENDOR_NVIDIA)
     if (uint(ballotARB(true)) == uint(~0)) {
-        fetch = false;
+        fetch = 0;
         
         if (RayIsVisible(specRay)) {
             curr = specRay;
@@ -97,6 +98,7 @@ void Something(vec3 voxelPos, uint packedVoxelData, vec4 diffuse, ivec2 texel_co
             sunRay.absorb *= 0.0;
         }
     }
+#   endif
     
     WriteRay(qBack, specRay);
     WriteRay(qBack, ambRay);
@@ -114,14 +116,14 @@ void main()  {
     int count = 0;
     
     RayStruct curr;
-    bool fetch = true;
+    int fetch = 1;
     while (queue_size > 0 && queue_size < ray_queue_cap && count++ < 1024) {
-        if (fetch) {
+        if (fetch != 0) {
             qFront = RaybufferPopWarp();
             curr = UnpackBufferedRay(ReadBufferedRay(qFront));
         }
         
-        fetch = true;
+        fetch = 13;
         
         // 0.0 is the clear value for the ray buffer.
         // Some fake (0, 0) rays are picked up by threads when the buffer is nearly empty.
