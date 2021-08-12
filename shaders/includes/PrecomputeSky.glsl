@@ -123,22 +123,37 @@ vec3 kPoint(vec3 wPos) {
 	return kCamera + wPos / 1000.0 * atmosphereScale;
 }
 
+
+vec4 tex3D(usampler2D textu, vec3 coord) {
+	vec3 dims = vec3(256.0, 128.0, 33.0);
+	
+	coord.z *= dims.z;
+	coord.y /= dims.z;
+	float fra = fract(coord.z);
+	float flo = floor(coord.z);
+	
+	vec4 a = uintBitsToFloat(texture(textu, coord.xy + vec2(0.0, (flo + 0) / dims.z)));
+	vec4 b = uintBitsToFloat(texture(textu, coord.xy + vec2(0.0, (flo + 1) / dims.z)));
+	
+	return mix(a, b, fra);
+}
+
 /*
 * Use these textures as if you were just doing a texture lookup
 * from another custom texture attatchment.
 */
-vec4 transmittanceLookup(sampler3D Combined3WayTexture, vec2 coord) {
+vec4 transmittanceLookup(vec2 coord) {
 	// Clamp the edges of the texture to avoid bleeding from other textures
 	coord = clamp(coord, vec2(0.5 / 256.0, 0.5 / 64.0), vec2(255.5 / 256.0, 63.5 / 64.0));
 	
-	return texture(Combined3WayTexture, vec3(coord * vec2(1.0, 0.5), 32.5 / 33.0));
+	return tex3D(sky_tex, vec3(coord * vec2(1.0, 0.5), 32.5 / 33.0));
 }
 
-vec4 irradianceLookup(sampler3D Combined3WayTexture, vec2 coord) {
+vec4 irradianceLookup(vec2 coord) {
 	// Clamp the edges of the texture to avoid bleeding from other textures
 	coord = clamp(coord, vec2(0.5 / 64.0, 0.5 / 16.0), vec2(63.5 / 64.0, 15.5 / 16.0));
 	
-	return texture(Combined3WayTexture, vec3(coord * vec2(0.25, 0.125) + vec2(0.0, 0.5), 32.5 / 33.0));
+	return tex3D(sky_tex, vec3(coord * vec2(0.25, 0.125) + vec2(0.0, 0.5), 32.5 / 33.0));
 }
 
 
@@ -206,7 +221,7 @@ vec2 GetTransmittanceTextureUvFromRMu(float r, float mu) {
 vec3 GetTransmittanceToTopAtmosphereBoundary(float r, float mu) {
 	vec2 uv = GetTransmittanceTextureUvFromRMu(r, mu);
 	
-	return transmittanceLookup(sky_tex, uv).rgb;
+	return transmittanceLookup(uv).rgb;
 }
 
 vec3 GetTransmittanceToSun(float r, float mu_s) {
@@ -322,7 +337,7 @@ vec3 GetCombinedScattering(float r, float mu, float mu_s, float nu, bool ray_r_m
 	uvw0.z *= float(SCATTERING_TEXTURE_NU_SIZE) / float(SCATTERING_TEXTURE_NU_SIZE + 1.0);
 	uvw1.z *= float(SCATTERING_TEXTURE_NU_SIZE) / float(SCATTERING_TEXTURE_NU_SIZE + 1.0);
 	
-	vec4 combined_scattering = texture(sky_tex, uvw0) * (1.0 - lerp) + texture(sky_tex, uvw1) * lerp;
+	vec4 combined_scattering = tex3D(sky_tex, uvw0) * (1.0 - lerp) + tex3D(sky_tex, uvw1) * lerp;
 	
 	vec3 scattering = vec3(combined_scattering);
 	single_mie_scattering = GetExtrapolatedSingleMieScattering(combined_scattering);
@@ -341,7 +356,7 @@ vec2 GetIrradianceTextureUvFromRMuS(float r, float mu_s) {
 vec3 GetIrradiance(float r, float mu_s) {
 	vec2 uv = GetIrradianceTextureUvFromRMuS(r, mu_s);
 
-	return irradianceLookup(sky_tex, uv).rgb;
+	return irradianceLookup(uv).rgb;
 }
 
 vec3 PrecomputedSky(

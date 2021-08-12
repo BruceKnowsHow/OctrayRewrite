@@ -17,8 +17,8 @@ vec2 texcoord = gl_FragCoord.xy / viewSize;
 uniform sampler2D noisetex;
 uniform vec3 sunDirection;
 
-#define sky_tex colortex12
-uniform sampler3D sky_tex;
+#define sky_tex colortex15
+uniform usampler2D sky_tex;
 #include "../../includes/Sky.glsl"
 
 vec3 GetWorldSpacePosition(vec2 coord, float depth) {
