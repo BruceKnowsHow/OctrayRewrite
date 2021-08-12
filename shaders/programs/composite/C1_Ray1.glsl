@@ -54,7 +54,7 @@ void Something(vec3 voxelPos, uint packedVoxelData, vec4 diffuse, ivec2 texel_co
     diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
     diffuse.rgb *= HSVtoRGB(vec3(hue, sat, 1.0));
     
-    vec4 tex_s = texelFetch(atlas_tex_s, texel_coord, 0);
+    vec4 tex_s = uintBitsToFloat(texelFetch(atlas_tex_s, texel_coord, 0));
     
     vec3 normal;
     normal.xy = tex_n.xy * 2.0 - 1.0;
@@ -153,7 +153,7 @@ void main()  {
             vec2 cornerTexcoord = floor(unpackUnorm2x16(texelFetch(voxel_data_tex, voxel_coord, 0).r) * atlasSize) / atlasSize;
             ivec2 texel_coord = ivec2(cornerTexcoord * atlasSize + tCoord * spriteSize);
             
-            vec4 diffuse = texelFetch(atlas_tex, texel_coord, 0);
+            vec4 diffuse = uintBitsToFloat(texelFetch(atlas_tex, texel_coord, 0));
             
             if (diffuse.a < 0.1) { // Escape
                 curr.voxelPos += fract_pos + -plane * exp2(-11);
@@ -163,7 +163,7 @@ void main()  {
                 if (IsSunlightRay(curr)) continue;
                 if (GetRayDepth(curr) >= MAX_LIGHT_BOUNCES) continue;
                 
-                vec4 tex_n = texelFetch(atlas_tex_n, texel_coord, 0);
+                vec4 tex_n = uintBitsToFloat(texelFetch(atlas_tex_n, texel_coord, 0));
                 
                 Something(curr.voxelPos + fract_pos, packedVoxelData, diffuse, texel_coord,
                           tex_n, -plane, curr, qFront, qBack, queue_size, fetch, STENCIL_RAY_TYPE);
@@ -200,14 +200,14 @@ void main()  {
             }
             
             // Create the new rays
-            vec4 diffuse = texelFetch(atlas_tex, texel_coord, 0);
+            vec4 diffuse = uintBitsToFloat(texelFetch(atlas_tex, texel_coord, 0));
             diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
             
             curr.absorb *= diffuse.rgb;
             curr.extra.xyz = tanPos;
             
-            vec4 tex_n = texelFetch(atlas_tex_n, texel_coord, 0);
-            vec4 tex_s = texelFetch(atlas_tex_s, texel_coord, 0);
+            vec4 tex_n = uintBitsToFloat(texelFetch(atlas_tex_n, texel_coord, 0));
+            vec4 tex_s = uintBitsToFloat(texelFetch(atlas_tex_s, texel_coord, 0));
             
             vec3 normal;
             normal.xy = tex_n.xy * 2.0 - 1.0;
@@ -280,8 +280,8 @@ void main()  {
         
         ivec2 texel_coord = ivec2(cornerTexcoord * atlasSize + tCoord * spriteSize);
         
-        vec4 diffuse = texelFetch(atlas_tex, texel_coord, 0);
-        vec4 tex_n = texelFetch(atlas_tex_n, texel_coord, 0);
+        vec4 diffuse = uintBitsToFloat(texelFetch(atlas_tex, texel_coord, 0));
+        vec4 tex_n = uintBitsToFloat(texelFetch(atlas_tex_n, texel_coord, 0));
         
         
         if (is_emissive(blockID) && !IsSunlightRay(curr)) {

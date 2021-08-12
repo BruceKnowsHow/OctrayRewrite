@@ -1,7 +1,7 @@
 uniform usampler2D voxel_data_tex;
-uniform  sampler2D atlas_tex;
-uniform  sampler2D atlas_tex_n;
-uniform  sampler2D atlas_tex_s;
+uniform usampler2D atlas_tex;
+uniform usampler2D atlas_tex_n;
+uniform usampler2D atlas_tex_s;
 
 struct VoxelIntersectOut {
     bool  hit;
