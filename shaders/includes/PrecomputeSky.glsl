@@ -133,6 +133,7 @@ vec4 tex3D(usampler2D textu, vec3 coord) {
 	float flo = floor(coord.z);
 	
 	vec4 a = uintBitsToFloat(texture(textu, coord.xy + vec2(0.0, (flo + 0) / dims.z)));
+	return a;
 	vec4 b = uintBitsToFloat(texture(textu, coord.xy + vec2(0.0, (flo + 1) / dims.z)));
 	
 	return mix(a, b, fra);
