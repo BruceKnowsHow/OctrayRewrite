@@ -5,8 +5,6 @@ uniform sampler2D depthtex0;
 uniform sampler2D colortex6;
 uniform sampler2D colortex7;
 
-uniform sampler2D noisetex;
-
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferProjectionInverse;
 uniform mat4 gbufferProjection;

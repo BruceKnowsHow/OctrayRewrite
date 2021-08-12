@@ -35,7 +35,7 @@ float GetNoise(vec2 coord) {
 	vec2 whole = floor(coord);
 	coord = whole + csmooth2(coord - whole);
 	
-	return texture2D(noisetex, coord * noiseResInverse + madd).x;
+	return uintBitsToFloat(texture2D(noisetex, coord * noiseResInverse + madd).x);
 }
 
 vec2 GetNoise2D(vec2 coord) {
@@ -43,7 +43,7 @@ vec2 GetNoise2D(vec2 coord) {
 	vec2 whole = floor(coord);
 	coord = whole + csmooth2(coord - whole);
 	
-	return texture2D(noisetex, coord * noiseResInverse + madd).xy;
+	return uintBitsToFloat(texture2D(noisetex, coord * noiseResInverse + madd).xy);
 }
 
 float GetCoverage(float clouds, float coverage) {
@@ -165,8 +165,8 @@ void CalculateStars(inout vec3 color, vec3 worldDir, float visibility, const boo
 //		coord = worldDir.xz * (2.5 * STAR_SCALE * (2.0 - worldDir.y) * noiseScale);
 		coord = worldDir.xz * (2.5 * STAR_SCALE * (2.0 - worldDir.y));
 	
-	float noise  = texture2D(noisetex, coord * 0.5).r;
-	      noise += texture2D(noisetex, coord).r * 0.5;
+	float noise  = uintBitsToFloat(texture2D(noisetex, coord * 0.5).r);
+	      noise += uintBitsToFloat(texture2D(noisetex, coord).r) * 0.5;
 	
 	float star = clamp(noise - 1.3 / STAR_COVERAGE, 0.0, 1.0);
 	
@@ -209,8 +209,8 @@ vec3 ComputeFarSpace(vec3 wDir, vec3 transmit, bool primary) {
 	
 	vec2 coord = wDir.xz * (2.5 * STAR_SCALE * (2.0 - wDir.y));
 	
-	float noise  = texture(noisetex, coord * 0.5).r;
-	      noise += texture(noisetex, coord).r * 0.5;
+	float noise  = uintBitsToFloat(texture(noisetex, coord * 0.5).r);
+	      noise += uintBitsToFloat(texture(noisetex, coord).r) * 0.5;
 	
 	float star = clamp(noise - 1.3 / STAR_COVERAGE, 0.0, 1.0);
 	

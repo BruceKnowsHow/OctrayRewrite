@@ -14,9 +14,10 @@ vec2 texcoord = gl_FragCoord.xy / viewSize;
 
 #include "../../includes/debug.glsl"
 
-uniform sampler2D noisetex;
+
 uniform vec3 sunDirection;
 
+uniform usampler2D noisetex;
 #define sky_tex colortex15
 uniform usampler2D sky_tex;
 #include "../../includes/Sky.glsl"

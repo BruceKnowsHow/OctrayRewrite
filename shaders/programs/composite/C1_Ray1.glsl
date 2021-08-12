@@ -37,8 +37,7 @@ layout (r32ui) uniform uimage2D colorimg3;
 
 
 // Sky
-uniform sampler2D noisetex;
-
+uniform usampler2D noisetex;
 #define sky_tex colortex15
 uniform usampler2D sky_tex;
 #include "../../includes/Sky.glsl"
