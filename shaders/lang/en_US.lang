@@ -1,3 +1,6 @@
+option.FRUSTUM_CULLING=Frustum Culling
+option.FRUSTUM_CULLING.comment=Greatly improves performance by only loading chunks directly front of you. Causes light-leaking indoors and inside of caves. Good for long-range outdoor screenshots.
+
 screen.Pathtracing=Path Tracing
 option.MAX_LIGHT_BOUNCES=Light Bounces
 option.MAX_LIGHT_BOUNCES.comment=The maximum number of times light is allowed to bounce.
