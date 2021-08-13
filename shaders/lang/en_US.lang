@@ -6,11 +6,16 @@ option.AMBIENT_RAYS=Ambient Rays
 option.SPECULAR_RAYS=Reflection Rays
 
 option.ANY_ATROUS_FILTER=Spatial Blur Filter
+option.ANY_ATROUS_FILTER.comment=Does a large-scale blur to reduce noise from path-tracing.
 option.REPROJECT=Temporal Filter
+option.REPROJECT.comment=Attempts to re-use path-tracing information from the previous frame, even when you are moving.
 
 
 screen.Color=Color Correction
 option.EXPOSURE=Exposure
+option.EXPOSURE.comment=Total brightness of the scene.
+option.LOWLIGHT_EYE=Lowlight Eye
+option.LOWLIGHT_EYE.comment=Causes the scene to become desaturated in low light conditions. Simulates the effect of rods & cones in the eye.
 
 
 screen.Effects=Post Effects

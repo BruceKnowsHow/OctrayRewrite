@@ -880,10 +880,10 @@ vec3 GetBloom(sampler2D tex, vec3 color) {
     
     float bloom_amount = BXLOOM_AMOUNT;
     
-    #ifdef world1
+    #if (defined world1)
     bloom_amount = 0.3;
     #endif
-    #ifdef worldn1
+    #if (defined worldn1)
     bloom_amount = 0.5;
     #endif
     
@@ -893,7 +893,7 @@ vec3 GetBloom(sampler2D tex, vec3 color) {
 
 #define EXPOSURE 0.00 // [-2.00 -1.66 -1.33 -1.00 -0.66 -0.33 0.00 0.33 0.66 1.00 1.33 1.66 2.00]
 
-
+#define LOWLIGHT_EYE
 void main() {
     vec3 avgCol = pow(textureLod(colortex13, vec2(0.5), 16).rgb, vec3(ACCUM_GAMMA));
     float expo = 0.75 / pow(dot(avgCol, vec3(1.0)), 1.0 / 1.5);
@@ -907,6 +907,12 @@ void main() {
     
     // vec3 color = diffuse * albedo;
     vec3 color = diffuse;
+    #ifdef LOWLIGHT_EYE
+    #if (defined world0)
+    // Lowlight eye
+    color = mix(vec3(dot(color, vec3(0.2126, 0.7152, 0.0722))), color, clamp( pow(dot(color, vec3(0.2126, 0.7152, 0.0722)) * 256.0, 2.0)*0.7 + 0.3, 0.0, 1.0));
+    #endif
+    #endif
     color = GetBloom(colortex14, color);
     color *= min(expo, 1000.0);
     color *= exp2(EXPOSURE);
