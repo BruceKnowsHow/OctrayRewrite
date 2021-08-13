@@ -208,7 +208,7 @@ mat3 ArbitraryTBN(vec3 normal) {
 }
 
 ivec2 ScreenToVoxelBuffer(ivec2 screenCoord) {
-    int linearized = (screenCoord.x + screenCoord.y * int(viewSize.x)) * 2;
+    int linearized = screenCoord.x + screenCoord.y * int(viewSize.x);
     linearized = int(sparse_voxel_buffer_size - 1) - linearized;
     
     return ivec2(linearized % sparse_voxel_buffer_width, linearized / sparse_voxel_buffer_width);
