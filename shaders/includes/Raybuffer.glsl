@@ -179,21 +179,21 @@ void WriteRay(inout uint index, RayStruct ray) {
 }
 
 // Atomic color write
-uint EncodeColor(vec3 color) {
-    color = sqrt(color) * 512;
-    color = clamp(color, vec3(0.0), vec3((1 << 10) - 1));
+uvec2 EncodeColor(vec3 color) {
+    color = color * 1024;
+    color = clamp(color, vec3(0.0), vec3(1 << 15));
     
     uvec3 col = uvec3(color);
-    return col.r + (col.g << 10) + (col.b << 20);
+    return uvec2(col.r + (col.g << 16), col.b);
 }
 
 void WriteColor(vec3 color, ivec2 screenCoord) {
     ivec2 coord = ScreenToVoxelBuffer(screenCoord);
     
-    uint enc = EncodeColor(color);
+    uvec2 enc = EncodeColor(color);
     
-    imageAtomicAdd(voxel_data_img, coord, enc);
-    // imageAtomicAdd(voxel_data_img, coord + ivec2(1, 0), enc.y);
+    imageAtomicAdd(voxel_data_img, coord              , enc.x);
+    imageAtomicAdd(voxel_data_img, coord + ivec2(1, 0), enc.y);
 }
 
 #endif

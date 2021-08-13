@@ -28,20 +28,23 @@ vec2 texcoord = (gl_FragCoord.xy + vec2(0.5)) / viewSize;
 // Atomic color read
 uniform usampler2D voxel_data_tex;
 
-vec3 DecodeColor(uint enc) {
+vec3 DecodeColor(uvec2 enc) {
     uvec3 col;
-    col.r = enc & ((1<<10)-1);
-    col.g = (enc >> 10) & ((1<<10)-1);
-    col.b = enc >> 20;
+    col.r = enc.r & ((1<<16)-1);
+    col.g = enc.r >> 16;
+    col.b = enc.g;
     
-    vec3 color = vec3(col) / 512.0;
-    return color * color;
+    vec3 color = vec3(col);
+    return color / 1024.0;
 }
 
 vec3 ReadColor(ivec2 screenCoord) {
     ivec2 coord = ScreenToVoxelBuffer(screenCoord);
     
-    uint enc = texelFetch(voxel_data_tex, coord, 0).r;
+    uvec2 enc;
+    
+    enc.x = texelFetch(voxel_data_tex, coord              , 0).r;
+    enc.y = texelFetch(voxel_data_tex, coord + ivec2(1, 0), 0).r;
     
     return DecodeColor(enc);
 }
