@@ -16,6 +16,7 @@ uniform int frameCounter;
 #include "../../BlockMappings.glsl"
 
 uniform usampler2D voxel_data_tex;
+uniform usampler2D colortex3;
 uniform usampler2D atlas_tex;
 uniform usampler2D atlas_tex_n;
 uniform usampler2D atlas_tex_s;
@@ -246,9 +247,9 @@ VoxelIntersectOut VoxelIntersect(vec3 voxelPos, vec3 worldDir) {
     VoxelIntersectOut VIO;
     int steps = 0;
     
-    uint chunk_addr = texelFetch(voxel_data_tex, get_sparse_chunk_coord(uvPos), 0).r;
+    uint chunk_addr = texelFetch(colortex3, old_get_sparse_chunk_coord(uvPos) + SPARSE0, 0).r;
     
-    voxel_coord = get_sparse_voxel_coord(chunk_addr & chunk_addr_mask, uvPos, lod);
+    voxel_coord = get_sparse_voxel_coord(chunk_addr, uvPos, lod);
     data = texelFetch(voxel_data_tex, voxel_coord + DATA0, 0).x & 255;
     vec4 voxel_data = unpackUnorm4x8(data);
     int block_id = decode_block_id(data);
@@ -282,8 +283,8 @@ VoxelIntersectOut VoxelIntersect(vec3 voxelPos, vec3 worldDir) {
         lod += int((newPos.z >> (lod+1)) != (oldPos >> (lod+1)));
         lod = min(lod, 4);
         uvPos = UnsortMinComp(newPos, uplane);
-        chunk_addr = texelFetch(voxel_data_tex, get_sparse_chunk_coord(uvPos), 0).r;
-        voxel_coord = get_sparse_voxel_coord(chunk_addr & chunk_addr_mask, uvPos, lod);
+        chunk_addr = texelFetch(colortex3, old_get_sparse_chunk_coord(uvPos) + SPARSE0, 0).r;
+        voxel_coord = get_sparse_voxel_coord(chunk_addr, uvPos, lod);
         uint data = 0;
         if (lod > 4 || chunk_addr != 0)
             data = texelFetch(voxel_data_tex, voxel_coord + DATA0, 0).x;
@@ -445,7 +446,7 @@ void main()  {
             
             vec2 tCoord = (((fract_pos) * 2.0 - 1.0) * mat2x3(RecoverTangentMat(plane))) * 0.5 + 0.5;
             
-            ivec2 voxel_coord = get_sparse_voxel_coord(texelFetch(voxel_data_tex, get_sparse_chunk_coord(ivec3(curr.voxelPos)), 0).r & chunk_addr_mask, ivec3(curr.voxelPos), 0);
+            ivec2 voxel_coord = get_sparse_voxel_coord(texelFetch(voxel_data_tex, old_get_sparse_chunk_coord(ivec3(curr.voxelPos)), 0).r, ivec3(curr.voxelPos), 0);
             uint packedVoxelData = texelFetch(voxel_data_tex, voxel_coord + DATA0, 0).r;
             vec2 spriteSize = exp2(vec2(decode_sprite_size(packedVoxelData)));
             vec2 cornerTexcoord = floor(unpackUnorm2x16(texelFetch(voxel_data_tex, voxel_coord, 0).r) * atlasSize) / atlasSize;
@@ -471,7 +472,7 @@ void main()  {
         } else if (IsParallaxRay(curr)) {
             vec3 pl = DecodePlane(curr.info >> 24);
             
-            ivec2 voxel_coord = get_sparse_voxel_coord(texelFetch(voxel_data_tex, get_sparse_chunk_coord(ivec3(curr.voxelPos)), 0).r & chunk_addr_mask, ivec3(curr.voxelPos), 0);
+            ivec2 voxel_coord = get_sparse_voxel_coord(texelFetch(voxel_data_tex, old_get_sparse_chunk_coord(ivec3(curr.voxelPos)), 0).r, ivec3(curr.voxelPos), 0);
             uint packedVoxelData = texelFetch(voxel_data_tex, voxel_coord + DATA0, 0).r;
             vec2 spriteSize = exp2(vec2(decode_sprite_size(packedVoxelData)));
             vec2 cornerTexcoord = floor(unpackUnorm2x16(texelFetch(voxel_data_tex, voxel_coord, 0).r) * atlasSize) / atlasSize;

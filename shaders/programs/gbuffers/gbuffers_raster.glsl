@@ -66,17 +66,6 @@ void main() {
     gl_Position.xy += TAAHash() * gl_Position.w;
     
     viewPos = (gbufferModelViewInverse * (gl_ModelViewMatrix * gl_Vertex)).xyz;
-    
-    vec2 texDirection = sign(texcoord - mc_midTexCoord)*vec2(1,sign(at_tangent.w));
-    vec3 triCentroid = worldPos.xyz - (tanMat * vec3(texDirection,0.5));
-    ivec3 voxelPos = ivec3(WorldToVoxelSpace(triCentroid));
-    ivec2 chunk_coord = get_sparse_chunk_coord(voxelPos);
-    
-    if ((imageLoad(voxel_data_img, chunk_coord).r & chunk_locked_bit) == 0) {
-        if ((imageAtomicOr(voxel_data_img, chunk_coord, chunk_locked_bit) & chunk_locked_bit) == 0) {
-            imageAtomicOr(voxel_data_img, chunk_coord, imageAtomicAdd(voxel_data_img, chunk_alloc_counter, 1));
-        }
-    }
 }
 
 #endif
@@ -100,6 +89,7 @@ uniform float far;
 #include "../../includes/Voxelization.glsl"
 
 layout (r32ui) uniform uimage2D voxel_data_img;
+layout (r32ui) uniform uimage2D colorimg3;
 
 in mat3 tanMat[];
 in vec4 vertexColor[];
@@ -156,9 +146,23 @@ void main() {
     )
         return;
     
-    if (blockID[0] == 5 && (abs(tanMat[0][2]).y < 0.9 || abs(fract(WorldToVoxelSpace(triCentroid).y) - 0.5) > 0.1 )) return;
+    if (blockID[0] == 5 && (abs(tanMat[0][2]).y < 0.9 || abs(fract(WorldToVoxelSpace(triCentroid).y) - 0.5) > 0.1 ))
+        return;
     
     ivec3 voxelPos = ivec3(WorldToVoxelSpace(triCentroid));
+    
+    // Store into chunk bitmap so that this chunk will be allocated next frame.
+    imageStore(colorimg3, old_get_sparse_chunk_coord(voxelPos), uvec4(1));
+    
+    // Allocate extra chunks along the movement vector.
+    // This prevents flickering when stepping over chunk borders.
+    vec2 chunkGrow = 16.0 * sign(previousCameraPosition.xz - cameraPosition.xz);
+    imageStore(colorimg3, old_get_sparse_chunk_coord(voxelPos + ivec3(chunkGrow.x, 0, 0)), uvec4(1));
+    imageStore(colorimg3, old_get_sparse_chunk_coord(voxelPos + ivec3(0, 0, chunkGrow.y)), uvec4(1));
+    
+    bool allocFlag = imageLoad(colorimg3, old_get_sparse_chunk_coord(voxelPos) + SPARSE0).r != 0;
+    if (!allocFlag)
+        return;
     
     // Store all of its data into the sparse texture
     uint packed_tex_coord = packUnorm2x16(cornerTexcoord[0]);
@@ -171,8 +175,7 @@ void main() {
     packedVoxelData |= int(round(log2(_spriteSize.x))) << VBM_sprite_size_start;
     if (is_sub_voxel(blockID[0])) packedVoxelData |= VBM_AABB_bit;
     
-    uint chunkAddr = imageLoad(voxel_data_img, get_sparse_chunk_coord(voxelPos)).r & chunk_addr_mask;
-    if (chunkAddr == 0) return;
+    uint chunkAddr = imageLoad(colorimg3, old_get_sparse_chunk_coord(voxelPos) + SPARSE0).r;
     ivec2 chunkCoord = get_sparse_voxel_coord(chunkAddr, voxelPos, 0);
     
     imageAtomicMax(voxel_data_img, chunkCoord, packed_tex_coord);

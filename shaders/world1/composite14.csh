@@ -3,4 +3,4 @@
 #define composite14
 #define csh
 
-#include "../programs/composite/C14_MaxReduce.glsl"
+#include "../programs/composite/C13to15_SparseReduce.glsl"

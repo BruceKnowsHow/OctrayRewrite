@@ -18,6 +18,7 @@ const float sunPathRotation = 40; // [-60 -50 -40 -30 -20 -10 0 10 20 30 40 50 6
 #define atlas_tex_n depthtex2
 #define atlas_tex_s shadowtex1
 
+#define SPARSE0 ivec2(512, 0)
 #define DATA0 ivec2(1, 0)
 
 #define voxel_data_img colorimg0
@@ -101,11 +102,6 @@ vec3 VoxelToWorldSpace(vec3 position) {
 }
 
 
-const int chunk_addr_buffer_start = sparse_voxel_buffer_size - sparse_chunk_map_size * sparse_chunk_map_size - 3;
-const ivec2 chunk_alloc_counter = ivec2(sparse_voxel_buffer_width-3, sparse_voxel_buffer_height-1);
-const uint chunk_locked_bit = 1 << 31;
-const uint chunk_addr_mask = ~chunk_locked_bit;
-
 // Get the base address of all voxel data with this lod
 int get_lod_base_addr(int lod) {
     return ((const_voxel_volume*8) - ((const_voxel_volume*8) >> int(lod*3)))/7;
@@ -128,10 +124,10 @@ int get_voxel_addr(ivec3 voxelPos, int lod) {
     return lod_base_addr + voxel_offset;
 }
 
-ivec2 get_sparse_chunk_coord(ivec3 voxelPos) {
-    int sparse_chunk_addr = chunk_addr_buffer_start + get_voxel_offset(voxelPos, 4);
+ivec2 old_get_sparse_chunk_coord(ivec3 voxelPos) {
+    int sparse_chunk_addr = get_voxel_offset(voxelPos, 4);
     
-    return ivec2(sparse_chunk_addr % sparse_voxel_buffer_width, sparse_chunk_addr / sparse_voxel_buffer_width);
+    return ivec2(sparse_chunk_addr % sparse_chunk_map_size, sparse_chunk_addr / sparse_chunk_map_size);
 }
 
 int get_sub_chunk_lod_base_addr(int lod) {
@@ -162,8 +158,6 @@ const int chunk_mem_size = (16*16*16) + (8*8*8) + (4*4*4) + (2*2*2) + (1*1*1) + 
 uint get_sparse_voxel_addr(uint chunk_addr, ivec3 voxelPos, int lod) {
     return chunk_addr * chunk_mem_size + get_sub_chunk_addr(voxelPos, lod);
 }
-
-uint upper_lod_buffer_start = uint(chunk_addr_buffer_start - 1) - get_lod_base_addr(5);
 
 ivec2 get_sparse_voxel_coord(uint chunk_addr, ivec3 voxelPos, int lod) {
     uint sparse_voxel_addr;
@@ -213,7 +207,7 @@ mat3 ArbitraryTBN(vec3 normal) {
 
 ivec2 ScreenToVoxelBuffer(ivec2 screenCoord) {
     int linearized = (screenCoord.x + screenCoord.y * int(viewSize.x)) * 2;
-    linearized = int(upper_lod_buffer_start - 2) - linearized;
+    linearized = int(sparse_voxel_buffer_size - 1) - linearized;
     
     return ivec2(linearized % sparse_voxel_buffer_width, linearized / sparse_voxel_buffer_width);
 }
