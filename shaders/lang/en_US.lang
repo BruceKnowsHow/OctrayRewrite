@@ -1,6 +1,22 @@
 option.FRUSTUM_CULLING=Frustum Culling
 option.FRUSTUM_CULLING.comment=Greatly improves performance by only loading chunks directly front of you. Causes light-leaking indoors and inside of caves. Good for long-range outdoor screenshots.
 
+option.RAYBUFFER_HEIGHT=Max Concurrent Rays
+option.RAYBUFFER_HEIGHT.comment=The maximum number of in-flight rays. Lower number might be faster (especially on AMD). Raise this if large regions of the screen appear black. Higher screen resolutions require more concurrent rays.
+value.RAYBUFFER_HEIGHT.1024=1m
+value.RAYBUFFER_HEIGHT.2048=2m
+value.RAYBUFFER_HEIGHT.4096=4m
+value.RAYBUFFER_HEIGHT.8192=8m
+value.RAYBUFFER_HEIGHT.16384=16m
+
+option.VOXEL_BUFFER_WIDTH=Max Loaded Chunks
+option.VOXEL_BUFFER_WIDTH.comment=The approximate maximum number of chunks that can be loaded. Lower number might be faster (especially on AMD). Raise this if the screen starts shining purple. Higher render distances require more loaded chunks. Enabling "Frustum Culling" requires less loaded chunks.
+value.VOXEL_BUFFER_WIDTH.1024=2k
+value.VOXEL_BUFFER_WIDTH.2048=4k
+value.VOXEL_BUFFER_WIDTH.4096=8k
+value.VOXEL_BUFFER_WIDTH.8192=16k
+value.VOXEL_BUFFER_WIDTH.16384=32k
+
 screen.Pathtracing=Path Tracing
 option.MAX_LIGHT_BOUNCES=Light Bounces
 option.MAX_LIGHT_BOUNCES.comment=The maximum number of times light is allowed to bounce.

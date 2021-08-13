@@ -137,7 +137,9 @@ uint RaybufferPopWarp() {
     return RaybufferIncrementWarp(raybuffer_front);
 }
 
-const ivec2 ray_buffer_dims = ivec2(16384, 4096);
+#define RAYBUFFER_HEIGHT 2048 // [1024 2048 4096 8192 16384]
+
+const ivec2 ray_buffer_dims = ivec2(4096, RAYBUFFER_HEIGHT);
 
 const int ray_queue_cap = int(ray_buffer_dims.x * ray_buffer_dims.y);
 
