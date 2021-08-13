@@ -14,7 +14,7 @@ uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferProjection;
 uniform vec3 cameraPosition;
 uniform vec3 previousCameraPosition;
-uniform ivec2 atlasSize;
+ivec2 atlasSize = ivec2(textureSize(tex, 0).xy);
 uniform vec2 taaJitter;
 
 uniform vec2 viewSize;
@@ -88,10 +88,12 @@ void main() {
 layout (triangles) in;
 layout (triangle_strip, max_vertices = 3) out;
 
+uniform sampler2D tex;
+
 uniform mat4 gbufferModelViewInverse;
 uniform vec3 cameraPosition;
 uniform vec3 previousCameraPosition;
-uniform ivec2 atlasSize;
+ivec2 atlasSize = ivec2(textureSize(tex, 0).xy);
 uniform vec2 viewSize;
 uniform float far;
 
@@ -170,6 +172,7 @@ void main() {
     if (is_sub_voxel(blockID[0])) packedVoxelData |= VBM_AABB_bit;
     
     uint chunkAddr = imageLoad(voxel_data_img, get_sparse_chunk_coord(voxelPos)).r & chunk_addr_mask;
+    if (chunkAddr == 0) return;
     ivec2 chunkCoord = get_sparse_voxel_coord(chunkAddr, voxelPos, 0);
     
     imageAtomicMax(voxel_data_img, chunkCoord, packed_tex_coord);
@@ -191,7 +194,7 @@ uniform sampler2D tex;
 uniform sampler2D normals;
 uniform sampler2D specular;
 
-uniform ivec2 atlasSize;
+ivec2 atlasSize = ivec2(textureSize(tex, 0).xy);
 
 in mat3 _tanMat;
 in vec4 _vertexColor;

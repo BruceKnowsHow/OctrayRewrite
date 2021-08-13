@@ -5,7 +5,6 @@ uniform mat4 gbufferModelViewInverse;
 uniform vec3 cameraPosition;
 uniform vec3 sunDirection;
 uniform vec2 viewSize;
-uniform ivec2 atlasSize;
 uniform float frameTimeCounter;
 uniform float far;
 uniform int frameCounter;
@@ -16,6 +15,7 @@ uniform int frameCounter;
 #include "../../includes/Voxelization.glsl"
 #include "../../BlockMappings.glsl"
 #include "../../includes/VoxelIntersect.glsl"
+ivec2 atlasSize = ivec2(textureSize(atlas_tex, 0).xy);
 /**********************************************************************/
 
 

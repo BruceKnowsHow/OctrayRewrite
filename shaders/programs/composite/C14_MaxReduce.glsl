@@ -7,9 +7,9 @@ uniform vec2 viewSize;
 uniform float frameTimeCounter;
 uniform int frameCounter;
 uniform float far;
-uniform ivec2 atlasSize;
 
 uniform sampler2D depthtex2;
+ivec2 atlasSize = ivec2(textureSize(depthtex2, 0).xy);
 
 #include "../../includes/Parallax.glsl"
 
