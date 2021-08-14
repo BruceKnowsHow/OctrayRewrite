@@ -849,10 +849,10 @@ vec3 CalculateNightSky(vec3 wDir) {
 
 vec3 GetFogColor(vec3 wDir) {
 	if (is_end)
-		return vec3(0.0, 0.002, 0.005) * 0.1;
+		return vec3(0.0, 0.002, 0.005) * 0.4;
 	
 	if (is_nether)
-		return vec3(0.02, 0.0, 0.0);
+		return vec3(0.01, 0.0, 0.0);
 	
 	return vec3(0.0);
 }
@@ -861,7 +861,7 @@ vec3 ComputeTotalSky(vec3 wPos, vec3 wDir, inout vec3 transmit, bool primary) {
 	vec3 color = vec3(0.0);
 	
 	if (is_end)
-		return vec3(max(vec3(0.0),   pow(vec3(max(vec3(0.0),   vec3(normalize(wDir+vec3(-0.2,0,0)).z, normalize(wDir+vec3(0,0,0.0)).z, normalize(wDir+vec3(0.2,0,0)).z)            )), vec3(50, 50, 50)*1.1)  ));
+		return vec3(max(vec3(0.0),   pow(vec3(max(vec3(0.0),   vec3(normalize(wDir+vec3(-0.2,0,0)).z, normalize(wDir+vec3(0,0,0.0)).z, normalize(wDir+vec3(0.2,0,0)).z)            )), vec3(50, 50, 50)*1.1)  )) * (primary ? 0.25 : 1.0) * 8.0;
 	
 	if (!is_overworld)
 		return vec3(0.0);
