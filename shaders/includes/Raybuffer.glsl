@@ -137,11 +137,12 @@ uint RaybufferPopWarp() {
     return RaybufferIncrementWarp(raybuffer_front);
 }
 
-#define RAYBUFFER_HEIGHT 2048 // [1024 2048 4096 8192 16384]
+#define RAYBUFFER_MULT 2 // [1 2 4]
 
-const ivec2 ray_buffer_dims = ivec2(4096, RAYBUFFER_HEIGHT);
+uniform vec2 raybuffer_dims;
+ivec2 ray_buffer_dims = ivec2(raybuffer_dims);
 
-const int ray_queue_cap = int(ray_buffer_dims.x * ray_buffer_dims.y);
+int ray_queue_cap = int(ray_buffer_dims.x * ray_buffer_dims.y);
 
 BufferedRay ReadBufferedRay(uint index) {
     BufferedRay buf;

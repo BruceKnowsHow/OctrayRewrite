@@ -69,10 +69,10 @@ bool IsConvexAABB(uint enc) {
 
 const int sparse_chunk_map_size = 512;
 
-#define VOXEL_BUFFER_WIDTH 4096 // [1024 2048 4096 8192 16384]
+#define VOXEL_BUFFER_HEIGHT 4096 // [1024 2048 4096 6144 8192 12288 16384]
 
-const int sparse_voxel_buffer_width = VOXEL_BUFFER_WIDTH;
-const int sparse_voxel_buffer_height = 8192;
+const int sparse_voxel_buffer_width = 8192;
+const int sparse_voxel_buffer_height = VOXEL_BUFFER_HEIGHT;
 const int sparse_voxel_buffer_size = sparse_voxel_buffer_width * sparse_voxel_buffer_height;
 
 const int   const_voxel_radius     = 1024;
