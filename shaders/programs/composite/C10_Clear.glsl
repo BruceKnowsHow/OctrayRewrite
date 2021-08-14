@@ -43,7 +43,7 @@ void main() {
     vec3 worldDir = normalize(worldPos);
     vec3 absorb = vec3(1.0);
     
-    vec3 skyColor = ComputeTotalSky(vec3(0.0), worldDir, absorb, true) * SKY_PRIMARY_BRIGHTNESS + GetFogColor(worldDir);
+    vec3 skyColor = ComputeTotalSky(vec3(0.0), worldDir, absorb, true)  + GetFogColor(worldDir);
     
     if (depth >= 1.0) {
         gl_FragData[0] = vec4(skyColor, 0.0);

@@ -896,7 +896,7 @@ vec3 GetBloom(sampler2D tex, vec3 color) {
 #define LOWLIGHT_EYE
 void main() {
     vec3 avgCol = pow(textureLod(colortex13, vec2(0.5), 16).rgb, vec3(ACCUM_GAMMA));
-    float expo = 0.75 / pow(dot(avgCol, vec3(1.0)), 1.0 / 1.5);
+    float expo = 1.5 / pow(dot(avgCol, vec3(1.0)), 1.0 / 2.0);
     
     vec3 diffuse = pow(texture(colortex13, texcoord).rgb, vec3(ACCUM_GAMMA));
     

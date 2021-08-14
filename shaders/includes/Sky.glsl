@@ -842,7 +842,7 @@ vec3 CalculateNightSky(vec3 wDir) {
 	float horizon = (pow(1.0 - abs(wDir.y), 4.0));
 	horizon = horizon*horizon * (3.0 - 2.0 * horizon);
 	
-	return nightSkyColor * value;
+	return nightSkyColor * 4.0 * value;
 }
 
 #define SKY_PRIMARY_BRIGHTNESS 0.25
@@ -874,7 +874,7 @@ vec3 ComputeTotalSky(vec3 wPos, vec3 wDir, inout vec3 transmit, bool primary) {
 	color += PrecomputedSky(kCamera, wDir, 0.0, sunDirection, transmit);
 	color += ComputeBackSky(wPos, wDir, transmit, primary);
 	
-	return color;
+	return color*0.25;
 }
 
 #endif

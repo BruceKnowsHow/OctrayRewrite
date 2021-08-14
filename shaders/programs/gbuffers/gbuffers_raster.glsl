@@ -26,7 +26,19 @@ uniform int frameCounter;
 #include "../../includes/Random.glsl"
 
 layout (r32ui) uniform uimage2D voxel_data_img;
+layout (r32ui) uniform uimage2D colorimg3;
 
+
+#define tanMat _tanMat
+#define vertexColor _vertexColor
+#define worldPos _worldPos
+#define viewPos _viewPos
+#define voxelPos _voxelPos
+#define midTexcoord _midTexcoord
+#define cornerTexcoord _cornerTexcoord
+#define texcoord _texcoord
+#define spriteSize _spriteSize
+#define blockID _blockID
 
 out mat3 tanMat;
 out vec4 vertexColor;
@@ -36,6 +48,7 @@ out vec3 voxelPos;
 flat out vec2 midTexcoord;
 flat out vec2 cornerTexcoord;
 out vec2 texcoord;
+out vec2 spriteSize;
 flat out int blockID;
 
 // Returns the tangent to world space matrix
@@ -57,8 +70,10 @@ void main() {
     blockID        = backport_id(int(mc_Entity.x)) % 256;
     midTexcoord    = mc_midTexCoord;
     cornerTexcoord = mc_midTexCoord.xy - abs(mc_midTexCoord.xy - texcoord);
-    
+    vec2 texDirection = sign(texcoord - mc_midTexCoord)*vec2(1,sign(at_tangent.w));
     worldPos    = (gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex).xyz;
+    vec3 triCentroid = worldPos.xyz - (tanMat * vec3(texDirection,0.5)) - tanMat[2] / 32.0;
+    triCentroid = mix(worldPos, triCentroid, 0.5);
     voxelPos    = WorldToVoxelSpace(worldPos) + tanMat[2] * exp2(-11);
     viewPos     = (gbufferModelView * vec4(worldPos, 1.0)).xyz;
     
@@ -66,88 +81,21 @@ void main() {
     gl_Position.xy += TAAHash() * gl_Position.w;
     
     viewPos = (gbufferModelViewInverse * (gl_ModelViewMatrix * gl_Vertex)).xyz;
-}
-
-#endif
-/**********************************************************************/
-
-/**********************************************************************/
-#if defined gsh
-
-layout (triangles) in;
-layout (triangle_strip, max_vertices = 3) out;
-
-uniform sampler2D tex;
-
-uniform mat4 gbufferModelViewInverse;
-uniform vec3 cameraPosition;
-uniform vec3 previousCameraPosition;
-ivec2 atlasSize = ivec2(textureSize(tex, 0).xy);
-uniform vec2 viewSize;
-uniform float far;
-
-#include "../../includes/Voxelization.glsl"
-
-layout (r32ui) uniform uimage2D voxel_data_img;
-layout (r32ui) uniform uimage2D colorimg3;
-
-in mat3 tanMat[];
-in vec4 vertexColor[];
-in vec3 worldPos[];
-in vec3 viewPos[];
-in vec3 voxelPos[];
-flat in vec2 midTexcoord[];
-flat in vec2 cornerTexcoord[];
-in vec2 texcoord[];
-flat in int blockID[];
-
-out mat3 _tanMat;
-out vec4 _vertexColor;
-out vec3 _worldPos;
-out vec3 _viewPos;
-out vec3 _voxelPos;
-out vec2 _texcoord;
-flat out vec2 _cornerTexcoord;
-flat out vec2 _spriteSize;
-flat out int _blockID;
-
-void main() {
-    _spriteSize = abs(midTexcoord[0] - texcoord[0]) * 2.0 * atlasSize;
     
-    for (int i = 0; i < 3; ++i) {
-        gl_Position = gl_in[i].gl_Position;
-        _tanMat = tanMat[i];
-        _vertexColor = vertexColor[i];
-        _worldPos = worldPos[i];
-        _viewPos  = viewPos[i];
-        _voxelPos = mix(voxelPos[i], (voxelPos[0] + voxelPos[1] + voxelPos[2]) / 3.0, exp2(-6)); // Nudge voxelPos (used as ray origin) away from the voxel corners to prevent light bleeding.
-        _texcoord = texcoord[i];
-        _cornerTexcoord = cornerTexcoord[i];
-        _blockID = blockID[i];
-        EmitVertex();
-    }
-    
-    if (!is_voxelized(blockID[0]))
+    if (!is_voxelized(blockID))
         return;
     
-    vec3 triCentroid = (worldPos[0] + worldPos[1] + worldPos[2]) / 3.0 - tanMat[0][2] / 32.0;
-    
-    
-    // Subvoxel culling section.
-    // Lots of subvoxel blocks have certain faces with poorly positioned texture coordinates.
-    // These blocks usually have at least one "good face".
-    // This section selects the bad faces that steal priority from the good faces, and culls them by doing return.
-    if (abs(dot(worldPos[0] - worldPos[1], worldPos[2] - worldPos[1])) < 0.001) return;
-    
-    if (((blockID[0] == 3
-      || blockID[0] == 4
-      || (blockID[0] >=  6 && blockID[0] <= 12)) && abs(tanMat[0][2].y) < 0.9)
-      || ((blockID[0] >= 14 && blockID[0] <= 21) && abs(tanMat[0][2].y) < 0.9)
+    if (((blockID == 3
+      || blockID == 4
+      || (blockID >=  6 && blockID <= 12)) && abs(tanMat[2].y) < 0.9)
+      || ((blockID >= 14 && blockID <= 21) && abs(tanMat[2].y) < 0.9)
     )
         return;
     
-    if (blockID[0] == 5 && (abs(tanMat[0][2]).y < 0.9 || abs(fract(WorldToVoxelSpace(triCentroid).y) - 0.5) > 0.1 ))
+    if (blockID == 5 && (abs(tanMat[2]).y < 0.9 || abs(fract(WorldToVoxelSpace(triCentroid).y) - 0.5) > 0.1 ))
         return;
+    
+    vec2 spriteSize = abs(midTexcoord - texcoord) * 2.0 * atlasSize;
     
     ivec3 voxelPos = ivec3(WorldToVoxelSpace(triCentroid));
     
@@ -160,22 +108,22 @@ void main() {
     imageStore(colorimg3, old_get_sparse_chunk_coord(voxelPos + ivec3(chunkGrow.x, 0, 0)), uvec4(1));
     imageStore(colorimg3, old_get_sparse_chunk_coord(voxelPos + ivec3(0, 0, chunkGrow.y)), uvec4(1));
     
-    bool allocFlag = imageLoad(colorimg3, old_get_sparse_chunk_coord(voxelPos) + SPARSE0).r != 0;
+    uint chunkAddr = imageLoad(colorimg3, old_get_sparse_chunk_coord(voxelPos) + SPARSE0).r;
+    bool allocFlag = chunkAddr != 0;
     if (!allocFlag)
         return;
     
     // Store all of its data into the sparse texture
-    uint packed_tex_coord = packUnorm2x16(cornerTexcoord[0]);
+    uint packed_tex_coord = packUnorm2x16(cornerTexcoord);
     
-    vec2 hueSat           = RGBtoHSV(vertexColor[0].rgb).rg;
+    vec2 hueSat           = RGBtoHSV(vertexColor.rgb).rg;
     uint packedVoxelData = 0;
-    packedVoxelData |= blockID[0];
+    packedVoxelData |= blockID;
     packedVoxelData |= int(clamp(hueSat.r, 0.0, 1.0) * 255.0) << VBM_hue_start;
     packedVoxelData |= int(clamp(hueSat.g, 0.0, 1.0) * 255.0) << VBM_sat_start;
-    packedVoxelData |= int(round(log2(_spriteSize.x))) << VBM_sprite_size_start;
-    if (is_sub_voxel(blockID[0])) packedVoxelData |= VBM_AABB_bit;
+    packedVoxelData |= int(round(log2(spriteSize.x))) << VBM_sprite_size_start;
+    if (is_sub_voxel(blockID)) packedVoxelData |= VBM_AABB_bit;
     
-    uint chunkAddr = imageLoad(colorimg3, old_get_sparse_chunk_coord(voxelPos) + SPARSE0).r;
     ivec2 chunkCoord = get_sparse_voxel_coord(chunkAddr, voxelPos, 0);
     
     imageAtomicMax(voxel_data_img, chunkCoord, packed_tex_coord);
