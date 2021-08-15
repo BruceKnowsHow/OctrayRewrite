@@ -14,6 +14,7 @@ uniform vec2 viewSize;
 uniform float frameTimeCounter;
 uniform float far;
 uniform int frameCounter;
+uniform bool accum;
 
 vec2 texcoord = gl_GlobalInvocationID.xy / viewSize;
 

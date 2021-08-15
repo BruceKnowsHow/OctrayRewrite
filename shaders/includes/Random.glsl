@@ -49,19 +49,36 @@ vec2  Rand2F(uvec2 seed) { return vec2(Triple32(seed.x), Triple32(seed.y)) / flo
 #define TAA
 
 #ifdef TAA
-	const bool do_taa = true;
-#else
-    const bool do_taa = false;
 #endif
 
 vec2 TAAHash() {
-	if (!do_taa) return vec2(0.0);
-    return ((Rand2F(uvec2((frameCounter+2)*2, (frameCounter+2)*2 + 1)) - 0.5) / viewSize) * 2.0;
+    vec2 ret = vec2(0.0);
+    
+#ifdef TAA
+    #ifdef REPROJECT
+        ret = ((Rand2F(uvec2((frameCounter+2)*2, (frameCounter+2)*2 + 1)) - 0.5) / viewSize) * 2.0;
+    #else
+    if (accum)
+        ret = ((Rand2F(uvec2((frameCounter+2)*2, (frameCounter+2)*2 + 1)) - 0.5) / viewSize) * 2.0;
+    #endif
+#endif
+    
+    return ret;
 }
 
 vec2 TAAPrevHash() {
-    if (!do_taa) return vec2(0.0);
-	return ((Rand2F(uvec2((frameCounter+1)*2, (frameCounter+1)*2 + 1)) - 0.5) / viewSize) * 2.0;
+    vec2 ret = vec2(0.0);
+    
+#ifdef TAA
+    #ifdef REPROJECT
+        ret = ((Rand2F(uvec2((frameCounter+1)*2, (frameCounter+1)*2 + 1)) - 0.5) / viewSize) * 2.0;
+    #else
+    if (accum)
+        ret = ((Rand2F(uvec2((frameCounter+1)*2, (frameCounter+1)*2 + 1)) - 0.5) / viewSize) * 2.0;
+    #endif
+#endif
+    
+    return ret;
 }
 
 vec3 CalculateConeVector(const float i, const float angularRadius, const int steps) {

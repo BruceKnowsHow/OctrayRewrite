@@ -15,12 +15,12 @@ uniform mat4 gbufferProjection;
 uniform vec3 cameraPosition;
 uniform vec3 previousCameraPosition;
 ivec2 atlasSize = ivec2(textureSize(tex, 0).xy);
-uniform vec2 taaJitter;
 
 uniform vec2 viewSize;
 uniform float far;
 uniform float frameTimeCounter;
 uniform int frameCounter;
+uniform bool accum;
 
 #include "../../includes/Voxelization.glsl"
 #include "../../includes/Random.glsl"

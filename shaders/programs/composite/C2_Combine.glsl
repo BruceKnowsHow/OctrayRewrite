@@ -12,8 +12,6 @@ uniform mat4 gbufferModelView;
 uniform vec3 cameraPosition;
 uniform vec3 previousCameraPosition;
 uniform vec2 viewSize;
-uniform vec2 taaJitter;
-uniform vec2 taaPrevJitter;
 uniform float far;
 uniform bool accum;
 uniform int frameCounter;
@@ -130,8 +128,6 @@ void main() {
     float linDepth = LinearizeDepth(depth);
     
     vec3 reproject = Reproject(vec3(texcoord, depth));
-    
-    reproject.xy += taaPrevJitter * 0.5;
     
     float reprojDist = length(reproject.xy * viewSize - 0.5 - (gl_FragCoord.xy));
     
