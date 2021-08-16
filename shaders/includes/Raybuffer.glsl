@@ -79,8 +79,8 @@ bool IsParallaxRay(RayStruct ray) { return ((ray.info & PARALLAX_RAY_TYPE) != 0)
 #define raybuffer_img colorimg1
 layout (rgba32f) uniform image2D raybuffer_img;
 
-const ivec2 raybuffer_back  = ivec2(513, 0);
-const ivec2 raybuffer_front = ivec2(513, 1);
+const ivec2 raybuffer_back  = ivec2(0, 513);
+const ivec2 raybuffer_front = ivec2(1, 513);
 
 uint GetRayDepth(RayStruct ray) { return ray.info & RAY_DEPTH_MASK; }
 

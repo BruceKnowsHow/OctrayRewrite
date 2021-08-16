@@ -1,8 +1,8 @@
 option.FRUSTUM_CULLING=Frustum Culling
 option.FRUSTUM_CULLING.comment=Greatly improves performance by only loading chunks directly front of you. Causes light-leaking indoors and inside of caves. Good for long-range outdoor screenshots.
 
-option.RAYBUFFER_MULT=Max Concurrent Rays
-option.RAYBUFFER_MULT.comment=The maximum number of in-flight rays. Lower number might be faster (especially on AMD). Raise this if large regions of the screen appear black. More light bounces require more concurrent rays.
+option.RAYBUFFER_MULT=Max Active Rays
+option.RAYBUFFER_MULT.comment=The maximum number of active rays. Lower number might be faster (especially on AMD). Raise this if large regions of the screen appear black. More light bounces require more active rays.
 value.RAYBUFFER_MULT.1=1x
 value.RAYBUFFER_MULT.2=2x
 value.RAYBUFFER_MULT.4=4x

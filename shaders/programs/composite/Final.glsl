@@ -40,6 +40,7 @@ const bool colortex13Clear = false;
 #endif
 
 layout (r32ui) uniform uimage2D colorimg2;
+layout (r32ui) uniform uimage2D colorimg3;
 
 uniform sampler2D colortex13;
 uniform sampler2D colortex14;
@@ -52,6 +53,7 @@ uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferModelView;
 uniform vec3 cameraPosition;
 uniform vec2 viewSize;
+uniform float far;
 
 uniform int hideGUI;
 
@@ -65,6 +67,8 @@ const bool colortex14MipmapEnabled = true;
 vec2 texcoord = gl_FragCoord.xy / viewSize * MC_RENDER_QUALITY;
 
 #include "../../includes/debug.glsl"
+
+#include "../../includes/Voxelization.glsl"
 
 
 /***********************************************************************/
@@ -794,6 +798,150 @@ vec3 Contrast(vec3 color) {
 
 
 /***********************************************************************/
+/* Text Rendering */
+const int
+	_A    = 0x64bd29, _B    = 0x749d27, _C    = 0xe0842e, _D    = 0x74a527,
+	_E    = 0xf09c2f, _F    = 0xf09c21, _G    = 0xe0b526, _H    = 0x94bd29,
+	_I    = 0xf2108f, _J    = 0x842526, _K    = 0x928CA9, _L    = 0x10842f,
+	_M    = 0x97a529, _N    = 0x95b529, _O    = 0x64a526, _P    = 0x74a4e1,
+	_Q    = 0x64acaa, _R    = 0x749ca9, _S    = 0xe09907, _T    = 0xf21084,
+	_U    = 0x94a526, _V    = 0x94a544, _W    = 0x94a5e9, _X    = 0x949929,
+	_Y    = 0x94b90e, _Z    = 0xf4106f, _0    = 0x65b526, _1    = 0x431084,
+	_2    = 0x64904f, _3    = 0x649126, _4    = 0x94bd08, _5    = 0xf09907,
+	_6    = 0x609d26, _7    = 0xf41041, _8    = 0x649926, _9    = 0x64b904,
+	_APST = 0x631000, _PI   = 0x07a949, _UNDS = 0x00000f, _HYPH = 0x001800,
+	_TILD = 0x051400, _PLUS = 0x011c40, _EQUL = 0x0781e0, _SLSH = 0x041041,
+	_EXCL = 0x318c03, _QUES = 0x649004, _COMM = 0x000062, _FSTP = 0x000002,
+	_QUOT = 0x528000, _BLNK = 0x000000, _COLN = 0x000802, _LPAR = 0x410844,
+	_RPAR = 0x221082;
+
+const ivec2 MAP_SIZE = ivec2(5, 5);
+
+int GetBit(int bitMap, int index) {
+	return (bitMap >> index) & 1;
+}
+
+float DrawChar(int charBitMap, inout vec2 anchor, vec2 charSize, vec2 uv) {
+	uv = (uv - anchor) / charSize;
+	
+	anchor.x += charSize.x;
+	
+	if (!all(lessThan(abs(uv - vec2(0.5)), vec2(0.5))))
+		return 0.0;
+	
+	uv *= MAP_SIZE;
+	
+	int index = int(uv.x) % MAP_SIZE.x + int(uv.y)*MAP_SIZE.x;
+	
+	return GetBit(charBitMap, index);
+}
+
+const int STRING_LENGTH = 8;
+int[STRING_LENGTH] drawString;
+
+float DrawString(inout vec2 anchor, vec2 charSize, int stringLength, vec2 uv) {
+	uv = (uv - anchor) / charSize;
+	
+	anchor.x += charSize.x * stringLength;
+	
+	if (!all(lessThan(abs(uv / vec2(stringLength, 1.0) - vec2(0.5)), vec2(0.5))))
+		return 0.0;
+	
+	int charBitMap = drawString[int(uv.x)];
+	
+	uv *= MAP_SIZE;
+	
+	int index = int(uv.x) % MAP_SIZE.x + int(uv.y)*MAP_SIZE.x;
+	
+	return GetBit(charBitMap, index);
+}
+
+float DrawInt(int val, inout vec2 anchor, vec2 charSize, vec2 uv) {
+	if (val == 0) return DrawChar(_0, anchor, charSize, uv);
+	
+	const int _DIGITS[10] = int[10](_0,_1,_2,_3,_4,_5,_6,_7,_8,_9);
+	
+	bool isNegative = val < 0.0;
+	
+	if (isNegative) drawString[0] = _HYPH;
+	
+	val = abs(val);
+	
+	int posPlaces = int(ceil(log10(abs(val) + 0.001)));
+	int strIndex = posPlaces - int(!isNegative);
+	
+	while (val > 0) {
+		drawString[strIndex--] = _DIGITS[val % 10];
+		val /= 10;
+	}
+	
+	return DrawString(anchor, charSize, posPlaces + int(isNegative), texcoord);
+}
+
+float DrawFloat(float val, inout vec2 anchor, vec2 charSize, int negPlaces, vec2 uv) {
+	int whole = int(val);
+	int part  = int(fract(abs(val)) * pow(10, negPlaces));
+	
+	int posPlaces = max(int(ceil(log10(abs(val)))), 1);
+	
+	anchor.x -= charSize.x * (posPlaces + int(val < 0) + 0.25);
+	float ret = 0.0;
+	ret += DrawInt(whole, anchor, charSize, uv);
+	ret += DrawChar(_FSTP, anchor, charSize, texcoord);
+	anchor.x -= charSize.x * 0.3;
+	ret += DrawInt(part, anchor, charSize, uv);
+	
+	return ret;
+}
+
+void DrawDebugText() {
+	#if (defined DEBUG) && (defined DRAW_DEBUG_VALUE) && (DEBUG_PROGRAM != 50)
+		vec2 charSize = vec2(0.03) * viewSize.yy / viewSize;
+		vec2 texPos = vec2(charSize.x / 5.0, 1.0 - charSize.y * 1.2);
+		
+		if (hideGUI != 0
+		 || texcoord.x > charSize.x * 12.0
+		 || texcoord.y < 1 - charSize.y * 4.5)
+		{ return; }
+		
+		vec3 color = vec3(0.0);
+		float text = 0.0;
+		
+		vec3 val = texelFetch(colortex7, ivec2(viewSize/2.0), 0).rgb;
+		
+		drawString = int[STRING_LENGTH](_R,_COLN, 0,0,0,0,0,0);
+		text += DrawString(texPos, charSize, 2, texcoord);
+		texPos.x += charSize.x * 5.0;
+		text += DrawFloat(val.r, texPos, charSize, 4, texcoord);
+		color += text * vec3(1.0, 0.0, 0.0) * sqrt(clamp(abs(val.r), 0.2, 1.0));
+		
+		texPos.x = charSize.x / 5.0, 1.0;
+		texPos.y -= charSize.y * 1.4;
+		
+		text = 0.0;
+		drawString = int[STRING_LENGTH](_G,_COLN, 0,0,0,0,0,0);
+		text += DrawString(texPos, charSize, 2, texcoord);
+		texPos.x += charSize.x * 5.0;
+		text += DrawFloat(val.g, texPos, charSize, 4, texcoord);
+		color += text * vec3(0.0, 1.0, 0.0) * sqrt(clamp(abs(val.g), 0.2, 1.0));
+		
+		texPos.x = charSize.x / 5.0, 1.0;
+		texPos.y -= charSize.y * 1.4;
+		
+		text = 0.0;
+		drawString = int[STRING_LENGTH](_B,_COLN, 0,0,0,0,0,0);
+		text += DrawString(texPos, charSize, 2, texcoord);
+		texPos.x += charSize.x * 5.0;
+		text += DrawFloat(val.b, texPos, charSize, 4, texcoord);
+		color += text * vec3(0.0, 0.8, 1.0)* sqrt(clamp(abs(val.b), 0.2, 1.0));
+		
+		gl_FragColor.rgb = color;
+	#endif
+}
+/***********************************************************************/
+
+
+/***********************************************************************/
 /* Bloom */
 vec4 cubic(float x) {
     float x2 = x * x;
@@ -928,8 +1076,85 @@ void main() {
     
     gl_FragColor.rgb = color;
     
+    // Parallax first-frame controller
     if (int(gl_FragCoord.x) == 0 && int(gl_FragCoord.y) == 0)
         imageStore(colorimg2, ivec2(4095), uvec4(1));
+    
+    { // Print error messages
+        uint chunks_loaded = imageLoad(colorimg3, ivec2(5, 513)).r; // Total count of chunks loaded
+        uint chunk_space = (chunk_mem_size * 2) * chunks_loaded; // Amount of uints consumed per chunk
+        uint screen_space = uint(viewSize.x) * uint(viewSize.y) * 2; // Amount of uints consumed for screen accumulation
+        bool chunk_overflow = chunk_space + screen_space > sparse_voxel_buffer_size;
+        
+        vec2 charSize = vec2(0.03) * viewSize.yy / viewSize;
+        
+        float textStartHeight = 1.0 - charSize.y * 2.5;
+        
+        if (chunk_overflow) {
+            vec2 texPos = vec2(0.5 - charSize.x * 25.0, textStartHeight);
+            vec2 bound0 = texPos;
+            float lineStart = texPos.x;
+            
+            vec3 textColor = vec3(0.0);
+            
+            drawString = int[STRING_LENGTH](_E,_R,_R,_O,_R,0,0,0);
+            textColor += DrawString(texPos, charSize, 5, texcoord) * vec3(1.0, 0.0, 0.0);
+            drawString = int[STRING_LENGTH](_COLN,0,_T,_O,0,0,0,0);
+            textColor += DrawString(texPos, charSize, 4, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_O,0,_M,_A,_N,_Y,0,_L);
+            textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_O,_A,_D,_E,_D,0,_C,_H);
+            textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_U,_N,_K,_S,0,0,0,0);
+            textColor += DrawString(texPos, charSize, 4, texcoord) * vec3(1.0);
+            
+            texPos.x = lineStart;
+            texPos.y -= charSize.y * 1.3;
+            
+            drawString = int[STRING_LENGTH](0,0,_T,_O,0,_F,_I,_X);
+            textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_COMM,0,_G,_O,0,_T,_O,0);
+            textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_QUOT,_S,_H,_A,_D,_E,_R,0);
+            textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_O,_P,_T,_I,_O,_N,_S,_QUOT);
+            textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_COLN,0,_QUOT,_P,_E,_R,_F,_O);
+            textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_R,_M,_A,_N,_C,_E,_QUOT,0);
+            textColor += DrawString(texPos, charSize, 7, texcoord) * vec3(1.0);
+            
+            vec2 bound1 = texPos;
+            
+            texPos.x = lineStart;
+            texPos.y -= charSize.y * 1.3;
+            
+            drawString = int[STRING_LENGTH](0,0,_A,_N,_D,0,_I,_N);
+            textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_C,_R,_E,_A,_S,_E,0,_QUOT);
+            textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_M,_A,_X,0,_L,_O,_A,_D);
+            textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_E,_D,0,_C,_H,_U,_N,_K);
+            textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
+            drawString = int[STRING_LENGTH](_S,_QUOT,0,0,0,0,0,0);
+            textColor += DrawString(texPos, charSize, 2, texcoord) * vec3(1.0);
+            
+            bound1.y = texPos.y;
+            
+            bound0.x -= charSize.x;
+            bound1.x += charSize.x;
+            bound0.y += charSize.y * 1.3 + charSize.x;
+            bound1.y -= charSize.y * 0.3 + charSize.x;
+            
+            if (texcoord.x > bound0.x && texcoord.y < bound0.y && texcoord.x < bound1.x && texcoord.y > bound1.y)
+                gl_FragColor.rgb = vec3(0.0);
+            
+            gl_FragColor.rgb += textColor;
+            
+            textStartHeight -= charSize.y * 5.5;
+        }
+    }
     
     #ifdef DEBUG
     if (hideGUI == 1)

@@ -92,9 +92,17 @@ void main() {
     
     // Clear colortex3 for the next frame of rendering
     imageStore(colorimg3, ivec2(gl_GlobalInvocationID.xy), uvec4(0));
-    if (ivec2(gl_GlobalInvocationID.xy).y == sparse_chunk_map_size-1) {
-        imageStore(colorimg3, ivec2(gl_GlobalInvocationID.x, sparse_chunk_map_size), uvec4(0));
-        imageStore(colorimg3, ivec2(gl_GlobalInvocationID.x, sparse_chunk_map_size+1), uvec4(0));
+    
+    if (gl_GlobalInvocationID.x == 0 && gl_GlobalInvocationID.y == 0) {
+        imageStore(colorimg3, ivec2(2, 513), uvec4(imageLoad(colorimg3, ivec2(0, 513)).x));
+        imageStore(colorimg3, ivec2(3, 513), uvec4(imageLoad(colorimg3, ivec2(1, 513)).x));
+        
+        imageStore(colorimg3, ivec2(0, 513), uvec4(0));
+        imageStore(colorimg3, ivec2(1, 513), uvec4(0));
+    }
+    
+    if (gl_GlobalInvocationID.x == 511 && gl_GlobalInvocationID.y == 511) {
+        imageStore(colorimg3, ivec2(5, 513), uvec4(texelFetch(colortex3, ivec2(511, 512), 0).x));
     }
 }
 
