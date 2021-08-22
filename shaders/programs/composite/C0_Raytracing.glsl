@@ -4,6 +4,7 @@ const vec2 workGroupsRender = vec2(1.0, 1.0);
 uniform sampler2D depthtex0;
 uniform sampler2D colortex6;
 uniform sampler2D colortex7;
+uniform sampler2D colortex12;
 
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferProjectionInverse;
@@ -23,12 +24,14 @@ vec2 texcoord = gl_GlobalInvocationID.xy / viewSize;
 #include "../../includes/Voxelization.glsl"
 #include "../../BlockMappings.glsl"
 
+uniform usampler2D atlas_tex;
+uniform usampler2D atlas_tex_n;
+uniform usampler2D atlas_tex_s;
+ivec2 atlasSize = ivec2(textureSize(atlas_tex, 0).xy);
+
 uniform usampler2D voxel_data_tex;
 layout (r32ui) uniform uimage2D voxel_data_img;
 layout (r32ui) uniform uimage2D colorimg3;
-uniform  sampler2D atlas_tex      ;
-uniform  sampler2D atlas_tex_n    ;
-uniform  sampler2D atlas_tex_s    ;
 
 #define RAND_SEED uint(uint(gl_GlobalInvocationID.x * gl_GlobalInvocationID.y) + uint(viewSize.x * viewSize.y) * frameCounter)
 #include "../../includes/Random.glsl"
@@ -63,14 +66,46 @@ vec3 DecodeNormal(float enc) {
 	return normal.xyz;
 }
 
+mat3 RecoverTangentMat(vec3 plane) {
+    mat3 tbn;
+    
+    vec3 plane3 = abs(plane);
+    
+    tbn[0].z = -plane.x;
+    tbn[0].y = 0.0;
+    tbn[0].x = plane3.y + plane.z;
+    
+    tbn[1].x = 0.0;
+    tbn[1].y = -plane3.x - plane3.z;
+    tbn[1].z = plane3.y;
+    
+    tbn[2] = plane;
+    
+    if (plane.y < -0.5) tbn = mat3(1,0,0,0,0,-1,0,-1,0);
+    
+    return tbn;
+}
+
+#include "../../includes/Parallax.glsl"
+
 void main() {
     float depth0 = texelFetch(depthtex0, ivec2(gl_GlobalInvocationID.xy), 0).x;
     
     vec3 worldPos = GetWorldSpacePosition(texcoord, depth0);
     vec3 worldDir = normalize(worldPos);
     vec3 voxelPos = WorldToVoxelSpace(worldPos);
-    
     vec3 absorb = vec3(1.0);
+    
+    // ivec2 cobble_corner = ivec2(18+9, 0) * 16;
+    
+    // vec3 tangent_pos = vec3(mod(cameraPosition.xz, 16), mod(cameraPosition.y/2.0, 8.0) - 4.0);
+    // vec3 plane;
+    // ivec2 pCoord = Parallax(tangent_pos, worldDir.xzy, plane, cobble_corner, ivec2(16), 0);
+    
+    // vec3 diffuse2 = uintBitsToFloat(texelFetch(atlas_tex, pCoord, 0)).rgb;
+    // show(diffuse2);
+    // exitCoord(ivec2(gl_GlobalInvocationID.xy));
+    // return;
     
     #define RASTER_ENGINE
     #ifdef RASTER_ENGINE
@@ -93,6 +128,30 @@ void main() {
         curr.info       = 1;
         curr.screenCoord = ivec2(gl_GlobalInvocationID.xy);
         
+        mat3 tanMat = mat3(1,0,0,0,1,0,0,0,1);
+        
+        
+        #ifdef PARALLAX
+        vec4 parallax_data = texelFetch(colortex12, ivec2(gl_GlobalInvocationID.xy), 0);
+        uint pData = floatBitsToUint(parallax_data.a);
+        
+        if (pData >= 8) {
+            pData = pData % 8;
+            
+            vec3 plane = DecodePlane(pData);
+            tanMat = RecoverTangentMat(plane);
+            
+            surfaceNormal = normalize(surfaceNormal*tanMat);
+            vec3 tanPos = parallax_data.rgb;
+            curr.voxelPos = curr.voxelPos - plane * exp2(-9);
+            curr.info |= pData << 24;
+            curr.info |= PARALLAX_RAY_TYPE;
+            
+            curr.worldDir = normalize(curr.worldDir * tanMat);
+            curr.extra.xyz = tanPos;
+        }
+        #endif
+        
         RayStruct specRay = curr;
         RayStruct  ambRay = curr;
         RayStruct  sunRay = curr;
@@ -101,7 +160,7 @@ void main() {
         ambRay.info  |= AMBIENT_RAY_TYPE;
         sunRay.info  |= SUNLIGHT_RAY_TYPE;
         
-        DoPBR(diffuse, surfaceNormal, surfaceNormal, tex_s, curr.worldDir, specRay, ambRay, sunRay);
+        DoPBR(diffuse, surfaceNormal, surfaceNormal, tex_s, curr.worldDir, specRay, ambRay, sunRay, tanMat);
         
         uint i;
         WriteRay(i, specRay);

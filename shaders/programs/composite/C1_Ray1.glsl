@@ -90,25 +90,9 @@ mat3 RecoverTangentMat(vec3 plane) {
     
     tbn[2] = plane;
     
+    if (plane.y < -0.5) tbn = mat3(1,0,0,0,0,-1,0,-1,0);
+    
     return tbn;
-}
-
-uint EncodePlane(vec3 plane) {
-    if (plane.x > 0.5) return 0;
-    if (plane.x < -0.5) return 1;
-    if (plane.y > 0.5) return 2;
-    if (plane.y < -0.5) return 3;
-    if (plane.z > 0.5) return 4;
-    if (plane.z < -0.5) return 5;
-}
-
-vec3 DecodePlane(uint enc) {
-    if (enc == 0) return vec3(1, 0, 0);
-    if (enc == 1) return vec3(-1, 0, 0);
-    if (enc == 2) return vec3(0, 1, 0);
-    if (enc == 3) return vec3(0, -1, 0);
-    if (enc == 4) return vec3(0, 0, 1);
-    return vec3(0, 0, -1);
 }
 
 struct AABB {
@@ -376,7 +360,7 @@ void Something(vec3 voxelPos, uint packedVoxelData, vec4 diffuse, ivec2 texel_co
     ambRay.info  = (GetRayDepth(curr) + 1) | AMBIENT_RAY_TYPE | flag;
     sunRay.info  = (GetRayDepth(curr) + 1) | SUNLIGHT_RAY_TYPE | flag;
     
-    DoPBR(diffuse, surfaceNormal, tanMat[2], tex_s, curr.worldDir, specRay, ambRay, sunRay);
+    DoPBR(diffuse, surfaceNormal, tanMat[2], tex_s, curr.worldDir, specRay, ambRay, sunRay, mat3(1,0,0,0,1,0,0,0,1));
     
     
     // Commit the new rays
@@ -447,7 +431,8 @@ void main()  {
             
             vec2 tCoord = (((fract_pos) * 2.0 - 1.0) * mat2x3(RecoverTangentMat(plane))) * 0.5 + 0.5;
             
-            ivec2 voxel_coord = get_sparse_voxel_coord(texelFetch(voxel_data_tex, old_get_sparse_chunk_coord(ivec3(curr.voxelPos)), 0).r, ivec3(curr.voxelPos), 0);
+            uint chunk_addr = texelFetch(colortex3, old_get_sparse_chunk_coord(ivec3(curr.voxelPos)) + SPARSE0, 0).r;
+            ivec2 voxel_coord = get_sparse_voxel_coord(chunk_addr, ivec3(curr.voxelPos), 0);
             uint packedVoxelData = texelFetch(voxel_data_tex, voxel_coord + DATA0, 0).r;
             vec2 spriteSize = exp2(vec2(decode_sprite_size(packedVoxelData)));
             vec2 cornerTexcoord = floor(unpackUnorm2x16(texelFetch(voxel_data_tex, voxel_coord, 0).r) * atlasSize) / atlasSize;
@@ -473,7 +458,8 @@ void main()  {
         } else if (IsParallaxRay(curr)) {
             vec3 pl = DecodePlane(curr.info >> 24);
             
-            ivec2 voxel_coord = get_sparse_voxel_coord(texelFetch(voxel_data_tex, old_get_sparse_chunk_coord(ivec3(curr.voxelPos)), 0).r, ivec3(curr.voxelPos), 0);
+            uint chunk_addr = texelFetch(colortex3, old_get_sparse_chunk_coord(ivec3(curr.voxelPos)) + SPARSE0, 0).r;
+            ivec2 voxel_coord = get_sparse_voxel_coord(chunk_addr, ivec3(curr.voxelPos), 0);
             uint packedVoxelData = texelFetch(voxel_data_tex, voxel_coord + DATA0, 0).r;
             vec2 spriteSize = exp2(vec2(decode_sprite_size(packedVoxelData)));
             vec2 cornerTexcoord = floor(unpackUnorm2x16(texelFetch(voxel_data_tex, voxel_coord, 0).r) * atlasSize) / atlasSize;
@@ -527,9 +513,7 @@ void main()  {
             ambRay.info  = (GetRayDepth(curr) + 1) | AMBIENT_RAY_TYPE | PARALLAX_RAY_TYPE | (curr.info & (~((1<<24)-1)));
             sunRay.info  = (GetRayDepth(curr) + 1) | SUNLIGHT_RAY_TYPE | PARALLAX_RAY_TYPE | (curr.info & (~((1<<24)-1)));
             
-            DoPBR(diffuse, plane, plane, tex_s, tanRay, specRay, ambRay, sunRay);
-            sunRay.worldDir = sunRay.worldDir * tanMat;
-            sunRay.absorb = curr.absorb;
+            DoPBR(diffuse, plane, plane, tex_s, tanRay, specRay, ambRay, sunRay, tanMat);
             
             WriteRay(qBack, specRay);
             WriteRay(qBack, ambRay);
@@ -596,10 +580,6 @@ void main()  {
         if (GetRayDepth(curr) >= MAX_LIGHT_BOUNCES)
             continue;
         
-        // if (GetRayDepth(curr) == 0) {
-        //     show(diffuse);
-        //     exitCoord(curr.screenCoord);
-        // }
         if (diffuse.a <= 0.1) { // Stencil
             // curr.info |= STENCIL_RAY_TYPE;
             // curr.voxelPos = VIO.voxelPos - VIO.plane * exp2(-12);
@@ -627,10 +607,6 @@ void main()  {
         if (IsSunlightRay(curr)) {
             continue;
         }
-        
-        // if (diffuse.a < 1.0) {
-        //     WriteColor(curr.absorb * 4.0 * vec3(1.0, 0.5, 0.3), curr.screenCoord);
-        // }
         
         // Create the new rays
         Something(VIO.voxelPos, packedVoxelData, diffuse, texel_coord, tex_n,

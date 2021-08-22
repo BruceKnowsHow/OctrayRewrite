@@ -37,11 +37,15 @@ option.LOWLIGHT_EYE=Lowlight Eye
 option.LOWLIGHT_EYE.comment=Causes the scene to become desaturated in low light conditions. Simulates the effect of rods & cones in the eye.
 
 
-screen.Effects=Post Effects
+screen.Effects=Effects
 
 option.BLOOM=Bloom
 option.TAA.comment=Temporal anti-aliasing.
 
+option.PARALLAX=POM
+option.POM_DEPTH_MULT=POM Height
+option.PARALLAX.comment=Parallax Occlusion Mapping.
+screen.POM.comment=Parallax Occlusion Mapping.
 
 option.RASTER_ENGINE=Raster Engine
 option.DEBUG=Debug Viewer

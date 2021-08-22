@@ -32,6 +32,9 @@ const bool colortex8Clear = false;
 const bool colortex9Clear = false;
 const bool colortex10Clear = false;
 const bool colortex13Clear = false;
+
+const int colortex12Format = RGBA32F;
+const vec4 colortex12ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
 */
 
 // #define FRUSTUM_CULLING
@@ -837,7 +840,7 @@ float DrawChar(int charBitMap, inout vec2 anchor, vec2 charSize, vec2 uv) {
 }
 
 const int STRING_LENGTH = 8;
-int[STRING_LENGTH] drawString;
+int drawString[STRING_LENGTH];
 
 float DrawString(inout vec2 anchor, vec2 charSize, int stringLength, vec2 uv) {
 	uv = (uv - anchor) / charSize;

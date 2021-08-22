@@ -1,4 +1,9 @@
+uniform float far;
+uniform vec3 cameraPosition;
+uniform vec2 viewSize;
+
 #include "../../BlockMappings.glsl"
+#include "../../includes/Voxelization.glsl"
 
 /**********************************************************************/
 #if defined vsh
@@ -12,17 +17,14 @@ uniform sampler2D tex;
 uniform mat4 gbufferModelView;
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferProjection;
-uniform vec3 cameraPosition;
+
 uniform vec3 previousCameraPosition;
 ivec2 atlasSize = ivec2(textureSize(tex, 0).xy);
 
-uniform vec2 viewSize;
-uniform float far;
 uniform float frameTimeCounter;
 uniform int frameCounter;
 uniform bool accum;
 
-#include "../../includes/Voxelization.glsl"
 #include "../../includes/Random.glsl"
 
 layout (r32ui) uniform uimage2D voxel_data_img;
@@ -48,7 +50,7 @@ out vec3 voxelPos;
 flat out vec2 midTexcoord;
 flat out vec2 cornerTexcoord;
 out vec2 texcoord;
-out vec2 spriteSize;
+flat out ivec2 spriteSize;
 flat out int blockID;
 
 // Returns the tangent to world space matrix
@@ -80,8 +82,6 @@ void main() {
     gl_Position = gbufferProjection * vec4(viewPos, 1.0);
     gl_Position.xy += TAAHash() * gl_Position.w;
     
-    viewPos = (gbufferModelViewInverse * (gl_ModelViewMatrix * gl_Vertex)).xyz;
-    
     if (!is_voxelized(blockID))
         return;
     
@@ -95,7 +95,7 @@ void main() {
     if (blockID == 5 && (abs(tanMat[2]).y < 0.9 || abs(fract(WorldToVoxelSpace(triCentroid).y) - 0.5) > 0.1 ))
         return;
     
-    vec2 spriteSize = abs(midTexcoord - texcoord) * 2.0 * atlasSize;
+    spriteSize = ivec2(exp2(round(log2(abs(midTexcoord - texcoord) * 2.0 * atlasSize))));
     
     ivec3 voxelPos = ivec3(WorldToVoxelSpace(triCentroid));
     
@@ -145,6 +145,12 @@ uniform sampler2D tex;
 uniform sampler2D normals;
 uniform sampler2D specular;
 
+uniform int frameCounter;
+uniform float frameTimeCounter;
+
+uniform mat4 gbufferModelView;
+uniform mat4 gbufferProjection;
+
 ivec2 atlasSize = ivec2(textureSize(tex, 0).xy);
 
 in mat3 _tanMat;
@@ -154,7 +160,7 @@ in vec3 _viewPos;
 in vec3 _voxelPos;
 in vec2 _texcoord;
 flat in vec2 _cornerTexcoord;
-flat in vec2 _spriteSize;
+flat in ivec2 _spriteSize;
 flat in int _blockID;
 
 #include "../../includes/debug.glsl"
@@ -172,36 +178,66 @@ float EncodeNormal(vec3 normal) {
 
 #include "../../includes/Parallax.glsl"
 
+#ifdef PARALLAX
+/* RENDERTARGETS:6,7,12 */
+#else
 /* RENDERTARGETS:6,7 */
+#endif
 
 void main() {
     vec3 plane = vec3(0,0,1);
     ivec2 corner = ivec2(_cornerTexcoord*atlasSize);
     float LOD = max(0.0, textureQueryLod(tex, _texcoord).y)*0;
     vec3 tangent_pos = vec3((_texcoord - _cornerTexcoord)*atlasSize, 1.0);
-    vec3 tangent_ray = normalize(_viewPos*_tanMat);
     
-    ivec2 spriteSize = ivec2(_spriteSize);
-    
-    ivec2 pCoord = Parallax(tangent_pos, tangent_ray, plane, corner, spriteSize, int(LOD));
+    vec3 tangent_ray = normalize(_worldPos * _tanMat);
+    tangent_pos.xy += 0.5 / _spriteSize;
     
     vec2 tCoord = _texcoord;
-    // vec2 tCoord = vec2(pCoord)/atlasSize;
     
-    vec4 diffuse = textureLod(tex, tCoord, LOD);
-    
-    if (diffuse.a < 0.1) {
+    if (textureLod(tex, tCoord, LOD).a < 0.1) {
         discard;
     }
-    
-    diffuse.rgb *= pow(_vertexColor.rgb, vec3(1.0 / 2.2));
     
     vec4 tex_n = texture(normals, tCoord);
     
     vec3 normal;
-    normal.xy = tex_n.xy * 2.0 - 1.0;
-    normal.z = sqrt(max(1.0 - dot(normal.xy, normal.xy), 0.0));
-    normal = normalize(normal);
+    
+    if (bool_parallax && tex_n.a < 1.0 && is_voxelized(_blockID) && length(_worldPos) < 1600.0) {
+        ivec2 pCoord = Parallax(tangent_pos, tangent_ray, normal, corner, _spriteSize, int(0));
+        
+        tCoord = vec2(pCoord) / atlasSize;
+        
+        if (normal.z > 0.5) {
+            tex_n = texture(normals, tCoord);
+            normal.xy = tex_n.xy * 2.0 - 1.0;
+            normal.z = sqrt(max(1.0 - dot(normal.xy, normal.xy), 0.0));
+            normal = normalize(normal);
+        }
+        
+        // vec3 tanPos = tangent_pos;
+        // tanPos.xy /= _spriteSize;
+        
+        // // return mix(1.0, sample, sprite_size/4.0);
+        // tanPos.z = (((tanPos.z  + 3)/4.0) - 1.0)*0.25;
+        // vec3 fract_pos = (_tanMat * (tanPos*2.0-1.0))*0.5+0.5;
+        
+        // vec4 wPos = vec4(VoxelToWorldSpace(floor(_voxelPos) + (fract_pos)), 1.0);
+        
+        // wPos = gbufferModelView * wPos;
+        // wPos = gbufferProjection * wPos;
+        
+        // wPos /= wPos.w;
+        // wPos.z = wPos.z * 0.5 + 0.5;
+    } else {
+        normal.xy = tex_n.xy * 2.0 - 1.0;
+        normal.z = sqrt(max(1.0 - dot(normal.xy, normal.xy), 0.0));
+        normal = normalize(normal);
+    }
+    
+    vec4 diffuse = textureLod(tex, tCoord, LOD);
+    
+    diffuse.rgb *= pow(_vertexColor.rgb, vec3(1.0 / 2.2));
     
     vec3 surfaceNormal = _tanMat * normal;
     
@@ -214,7 +250,11 @@ void main() {
     gl_FragData[0] = vec4(uintBitsToFloat(packUnorm4x8(diffuse * 255.0 / 256.0)), EncodeNormal(surfaceNormal), uintBitsToFloat(packUnorm4x8(texture(specular, tCoord) * 255.0 / 256.0)), _blockID);
     gl_FragData[1].rgb = _voxelPos + _tanMat[2] * exp2(-11);
     
-    // exit();
+    #ifdef PARALLAX
+    gl_FragData[2] = vec4(tangent_pos, uintBitsToFloat(EncodePlane(_tanMat[2]) + 8*uint(tex_n.a < 1.0)));
+    #endif
+    
+    exit();
 }
 
 #endif
