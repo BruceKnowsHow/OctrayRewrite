@@ -142,8 +142,11 @@ void main() {
 #if defined fsh
 
 uniform sampler2D tex;
-uniform sampler2D normals;
+uniform usampler2D normals;
 uniform sampler2D specular;
+
+#undef atlas_tex_n
+#define atlas_tex_n normals
 
 uniform int frameCounter;
 uniform float frameTimeCounter;
@@ -199,7 +202,7 @@ void main() {
         discard;
     }
     
-    vec4 tex_n = texture(normals, tCoord);
+    vec4 tex_n = uintBitsToFloat(texture(normals, tCoord));
     
     vec3 normal;
     
@@ -209,7 +212,7 @@ void main() {
         tCoord = vec2(pCoord) / atlasSize;
         
         if (normal.z > 0.5) {
-            tex_n = texture(normals, tCoord);
+            tex_n = uintBitsToFloat(texture(normals, tCoord));
             normal.xy = tex_n.xy * 2.0 - 1.0;
             normal.z = sqrt(max(1.0 - dot(normal.xy, normal.xy), 0.0));
             normal = normalize(normal);

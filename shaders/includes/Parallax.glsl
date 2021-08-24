@@ -31,10 +31,25 @@ ivec2 SpriteCoord(vec2 tPos, ivec2 sprite_size) {
     return ivec2(tPos + sprite_size * 8) % sprite_size;
 }
 
+// #define QUADTREE_POM
+#ifdef QUADTREE_POM
+#endif
+
 #define POM_DEPTH_MULT 1.00 // [0.25 0.50 0.75 1.00 1.25 1.50 2.00 3.00 4.00]
 float GetTexelHeight(ivec2 coord, int lod, float sprite_size) {
-    // return uintBitsToFloat(imageLoad(colorimg2, get_POM_coord(coord, lod)).r);
-    return mix(1.0, uintBitsToFloat(imageLoad(colorimg2, get_POM_coord(coord, lod)).r), sprite_size/4.0 * POM_DEPTH_MULT);
+    float ret;
+    
+    #ifdef QUADTREE_POM
+        ret = mix(1.0, uintBitsToFloat(imageLoad(colorimg2, get_POM_coord(coord, lod)).r), sprite_size/4.0 * POM_DEPTH_MULT * 0.75);
+    #else
+        #if (!defined composite0) && (!defined composite3)
+            ret = mix(1.0, uintBitsToFloat(texelFetch(atlas_tex_n, coord, 0).a), sprite_size/4.0 * POM_DEPTH_MULT * 0.75);
+        #else
+            ret = 1.0;
+        #endif
+    #endif
+    
+    return ret;
 }
 
 uint EncodePlane(vec3 plane) {
