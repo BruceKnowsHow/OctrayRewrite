@@ -840,7 +840,7 @@ float DrawChar(int charBitMap, inout vec2 anchor, vec2 charSize, vec2 uv) {
 }
 
 const int STRING_LENGTH = 8;
-int drawString[STRING_LENGTH];
+int string_to_draw[STRING_LENGTH];
 
 float DrawString(inout vec2 anchor, vec2 charSize, int stringLength, vec2 uv) {
 	uv = (uv - anchor) / charSize;
@@ -850,7 +850,7 @@ float DrawString(inout vec2 anchor, vec2 charSize, int stringLength, vec2 uv) {
 	if (!all(lessThan(abs(uv / vec2(stringLength, 1.0) - vec2(0.5)), vec2(0.5))))
 		return 0.0;
 	
-	int charBitMap = drawString[int(uv.x)];
+	int charBitMap = string_to_draw[int(uv.x)];
 	
 	uv *= MAP_SIZE;
 	
@@ -866,7 +866,7 @@ float DrawInt(int val, inout vec2 anchor, vec2 charSize, vec2 uv) {
 	
 	bool isNegative = val < 0.0;
 	
-	if (isNegative) drawString[0] = _HYPH;
+	if (isNegative) string_to_draw[0] = _HYPH;
 	
 	val = abs(val);
 	
@@ -874,7 +874,7 @@ float DrawInt(int val, inout vec2 anchor, vec2 charSize, vec2 uv) {
 	int strIndex = posPlaces - int(!isNegative);
 	
 	while (val > 0) {
-		drawString[strIndex--] = _DIGITS[val % 10];
+		string_to_draw[strIndex--] = _DIGITS[val % 10];
 		val /= 10;
 	}
 	
@@ -912,7 +912,7 @@ void DrawDebugText() {
 		
 		vec3 val = texelFetch(colortex7, ivec2(viewSize/2.0), 0).rgb;
 		
-		drawString = int[STRING_LENGTH](_R,_COLN, 0,0,0,0,0,0);
+		string_to_draw = int[STRING_LENGTH](_R,_COLN, 0,0,0,0,0,0);
 		text += DrawString(texPos, charSize, 2, texcoord);
 		texPos.x += charSize.x * 5.0;
 		text += DrawFloat(val.r, texPos, charSize, 4, texcoord);
@@ -922,7 +922,7 @@ void DrawDebugText() {
 		texPos.y -= charSize.y * 1.4;
 		
 		text = 0.0;
-		drawString = int[STRING_LENGTH](_G,_COLN, 0,0,0,0,0,0);
+		string_to_draw = int[STRING_LENGTH](_G,_COLN, 0,0,0,0,0,0);
 		text += DrawString(texPos, charSize, 2, texcoord);
 		texPos.x += charSize.x * 5.0;
 		text += DrawFloat(val.g, texPos, charSize, 4, texcoord);
@@ -932,7 +932,7 @@ void DrawDebugText() {
 		texPos.y -= charSize.y * 1.4;
 		
 		text = 0.0;
-		drawString = int[STRING_LENGTH](_B,_COLN, 0,0,0,0,0,0);
+		string_to_draw = int[STRING_LENGTH](_B,_COLN, 0,0,0,0,0,0);
 		text += DrawString(texPos, charSize, 2, texcoord);
 		texPos.x += charSize.x * 5.0;
 		text += DrawFloat(val.b, texPos, charSize, 4, texcoord);
@@ -1100,31 +1100,31 @@ void main() {
             
             vec3 textColor = vec3(0.0);
             
-            drawString = int[STRING_LENGTH](_E,_R,_R,_O,_R,0,0,0);
+            string_to_draw = int[STRING_LENGTH](_E,_R,_R,_O,_R,0,0,0);
             textColor += DrawString(texPos, charSize, 5, texcoord) * vec3(1.0, 0.0, 0.0);
-            drawString = int[STRING_LENGTH](_COLN,0,_T,_O,0,0,0,0);
+            string_to_draw = int[STRING_LENGTH](_COLN,0,_T,_O,0,0,0,0);
             textColor += DrawString(texPos, charSize, 4, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_O,0,_M,_A,_N,_Y,0,_L);
+            string_to_draw = int[STRING_LENGTH](_O,0,_M,_A,_N,_Y,0,_L);
             textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_O,_A,_D,_E,_D,0,_C,_H);
+            string_to_draw = int[STRING_LENGTH](_O,_A,_D,_E,_D,0,_C,_H);
             textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_U,_N,_K,_S,0,0,0,0);
+            string_to_draw = int[STRING_LENGTH](_U,_N,_K,_S,0,0,0,0);
             textColor += DrawString(texPos, charSize, 4, texcoord) * vec3(1.0);
             
             texPos.x = lineStart;
             texPos.y -= charSize.y * 1.3;
             
-            drawString = int[STRING_LENGTH](0,0,_T,_O,0,_F,_I,_X);
+            string_to_draw = int[STRING_LENGTH](0,0,_T,_O,0,_F,_I,_X);
             textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_COMM,0,_G,_O,0,_T,_O,0);
+            string_to_draw = int[STRING_LENGTH](_COMM,0,_G,_O,0,_T,_O,0);
             textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_QUOT,_S,_H,_A,_D,_E,_R,0);
+            string_to_draw = int[STRING_LENGTH](_QUOT,_S,_H,_A,_D,_E,_R,0);
             textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_O,_P,_T,_I,_O,_N,_S,_QUOT);
+            string_to_draw = int[STRING_LENGTH](_O,_P,_T,_I,_O,_N,_S,_QUOT);
             textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_COLN,0,_QUOT,_P,_E,_R,_F,_O);
+            string_to_draw = int[STRING_LENGTH](_COLN,0,_QUOT,_P,_E,_R,_F,_O);
             textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_R,_M,_A,_N,_C,_E,_QUOT,0);
+            string_to_draw = int[STRING_LENGTH](_R,_M,_A,_N,_C,_E,_QUOT,0);
             textColor += DrawString(texPos, charSize, 7, texcoord) * vec3(1.0);
             
             vec2 bound1 = texPos;
@@ -1132,15 +1132,15 @@ void main() {
             texPos.x = lineStart;
             texPos.y -= charSize.y * 1.3;
             
-            drawString = int[STRING_LENGTH](0,0,_A,_N,_D,0,_I,_N);
+            string_to_draw = int[STRING_LENGTH](0,0,_A,_N,_D,0,_I,_N);
             textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_C,_R,_E,_A,_S,_E,0,_QUOT);
+            string_to_draw = int[STRING_LENGTH](_C,_R,_E,_A,_S,_E,0,_QUOT);
             textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_M,_A,_X,0,_L,_O,_A,_D);
+            string_to_draw = int[STRING_LENGTH](_M,_A,_X,0,_L,_O,_A,_D);
             textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_E,_D,0,_C,_H,_U,_N,_K);
+            string_to_draw = int[STRING_LENGTH](_E,_D,0,_C,_H,_U,_N,_K);
             textColor += DrawString(texPos, charSize, 8, texcoord) * vec3(1.0);
-            drawString = int[STRING_LENGTH](_S,_QUOT,0,0,0,0,0,0);
+            string_to_draw = int[STRING_LENGTH](_S,_QUOT,0,0,0,0,0,0);
             textColor += DrawString(texPos, charSize, 2, texcoord) * vec3(1.0);
             
             bound1.y = texPos.y;
