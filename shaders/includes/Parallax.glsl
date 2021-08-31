@@ -16,7 +16,7 @@ vec2 MinComponent2(vec2 a) {
 ivec2 get_POM_LOD_offset(int LOD) {
     ivec2 ret = ivec2(0);
     
-    for (int i = 0; i < LOD; ++i) {
+    for (int i = 1; i < LOD; ++i) {
         ret.y += atlasSize.y >> i;
     }
     
@@ -28,29 +28,20 @@ ivec2 get_POM_coord(ivec2 coord, int LOD) {
 }
 
 ivec2 SpriteCoord(vec2 tPos, ivec2 sprite_size) {
-    return ivec2(tPos + sprite_size * 8) % sprite_size;
+    return (ivec2(tPos) + sprite_size * 8) % sprite_size;
 }
 
 // #define QUADTREE_POM
 #ifdef QUADTREE_POM
 #endif
 
+#ifdef QUADTREE_POM
+const bool bool_quadtree_parallax = true;
+#else
+const bool bool_quadtree_parallax = false;
+#endif
+
 #define POM_DEPTH_MULT 1.00 // [0.25 0.50 0.75 1.00 1.25 1.50 2.00 3.00 4.00]
-float GetTexelHeight(ivec2 coord, int lod, float sprite_size) {
-    float ret;
-    
-    #ifdef QUADTREE_POM
-        ret = mix(1.0, uintBitsToFloat(imageLoad(colorimg2, get_POM_coord(coord, lod)).r), sprite_size/4.0 * POM_DEPTH_MULT * 0.75);
-    #else
-        #if (!defined composite0) && (!defined composite3)
-            ret = mix(1.0, uintBitsToFloat(texelFetch(atlas_tex_n, coord, 0).a), sprite_size/4.0 * POM_DEPTH_MULT * 0.75);
-        #else
-            ret = 1.0;
-        #endif
-    #endif
-    
-    return ret;
-}
 
 uint EncodePlane(vec3 plane) {
     if (plane.x > 0.5) return 0;
@@ -81,7 +72,28 @@ const bool bool_parallax = false;
 // bool sideHit = tangent_pos.z  + tangent_ray.z *dot(dists,plane)*exp2(-16) < boundary.z;
 #if (!defined composite3)
 
-ivec2 Parallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 corner, ivec2 sprite_size, int lodLimit) {
+#define FloorL(x, y) (floor((x) * exp2(-(y))) * exp2(y))
+
+float GetTexelHeight(ivec2 coord, int lod, float sprite_size) {
+    float ret;
+    
+    #ifdef QUADTREE_POM
+        if (lod == 0)
+            ret = mix(1.0, uintBitsToFloat(texelFetch(atlas_tex_n, coord, 0).a), sprite_size/4.0 * POM_DEPTH_MULT * 0.75);
+        else
+            ret = mix(1.0, uintBitsToFloat(imageLoad(colorimg2, get_POM_coord(coord, lod)).r), sprite_size/4.0 * POM_DEPTH_MULT * 0.75);
+    #else
+        #if (!defined composite0) && (!defined composite3)
+            ret = mix(1.0, uintBitsToFloat(texelFetch(atlas_tex_n, coord, 0).a), sprite_size/4.0 * POM_DEPTH_MULT * 0.75);
+        #else
+            ret = 1.0;
+        #endif
+    #endif
+    
+    return ret;
+}
+
+ivec2 LinearParallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 corner, ivec2 sprite_size, int lodLimit) {
     vec3 step_dir = sign(tangent_ray);
     vec3 dir_is_positive = max(step_dir, vec3(0.0));
     
@@ -129,7 +141,6 @@ ivec2 Parallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 
             break;
         }
         
-        
         prevDist=dists;
         boundary.xy += plane.xy * step_dir.xy;
         tPos.xy += plane.xy * step_dir.xy;
@@ -139,6 +150,115 @@ ivec2 Parallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 
         normal *= -sign(tangent_ray);
         tangent_pos += normal * exp2(-10);
         return corner + SpriteCoord(tangent_pos.xy - normal.xy * exp2(-9), sprite_size);
+    }
+    
+    return ivec2(-10);
+}
+
+
+ivec2 Parallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 corner, ivec2 sprite_size, int lodLimit) {
+    if (!bool_quadtree_parallax)
+        return LinearParallax(tangent_pos, tangent_ray, normal, corner, sprite_size, lodLimit);
+    
+    vec3 step_dir = sign(tangent_ray);
+    vec3 dir_is_positive = max(step_dir, vec3(0.0));
+    
+    tangent_pos.xy += sprite_size * 4 * (1.0 - dir_is_positive.xy);
+    
+    if (tangent_pos.z > 1.0) {
+        if (tangent_ray.z > 0) return ivec2(-10);
+        tangent_pos = tangent_pos + tangent_ray * (1.0 - tangent_pos.z) / tangent_ray.z * 0.999999;
+    }
+    
+    int lod = (tangent_pos.z >= 1.0) ? 4 : 0;
+    int steps = 0;
+    
+    vec3 boundary;
+    vec3 initBound;
+    vec3 tPos = tangent_pos;
+    boundary.xy = FloorL(tPos.xy, lod) + dir_is_positive.xy*exp2(lod);
+    initBound.xy = FloorL(tPos.xy, lod) + dir_is_positive.xy*exp2(lod);
+    vec2 prevPlane = vec2(0.0);
+    bool hit = false;
+    
+    while (++steps < 256) {
+        float sampleHeight = GetTexelHeight(corner + SpriteCoord(tPos.xy, sprite_size), lod, sprite_size.x);
+        
+        vec2 dists = (boundary.xy - tangent_pos.xy) / tangent_ray.xy;
+        vec2 plane = MinComponent2(dists.xy);
+        
+        vec2 exi = tangent_pos.xy + tangent_ray.xy * (sampleHeight - tangent_pos.z) / tangent_ray.z;
+        
+        vec2 backAxis = plane;
+        vec2 boundAxis = boundary.xy;
+        if (tangent_ray.z > 0.0) {
+            backAxis = prevPlane;
+            boundAxis = boundary.xy - step_dir.xy*exp2(lod);
+        }
+        
+        // Escaped out the top.
+        if (tangent_pos.z + tangent_ray.z * dot((boundAxis.xy - tangent_pos.xy) / tangent_ray.xy, plane) > 1.000001) {
+            tangent_pos = tangent_pos + tangent_ray * (1.0 - tangent_pos.z) / tangent_ray.z;
+            lod = 1;
+            break;
+        }
+        
+        if (dot(backAxis, (exi.xy - boundAxis)*step_dir.xy*step_dir.z) > 0) {
+            normal = vec3(prevPlane, 0.0);
+            
+            int oldLod = lod;
+            
+            if (lod > 0) {
+                lod--;
+            }
+            
+            if (tangent_ray.z < 0.0 && (dot(prevPlane, (exi.xy - (boundary.xy - step_dir.xy*exp2(lod)))*step_dir.xy*step_dir.z) < 0.0)) {
+                normal = vec3(0.0, 0.0, 0.0);
+            }
+            
+            if (oldLod > 0) {
+                if (normal.x + normal.y < 0.5) {
+                    tPos.xy = tangent_pos.xy + tangent_ray.xy*(sampleHeight - tangent_pos.z)/tangent_ray.z + step_dir.xy*exp2(-11)*0;
+                }
+                
+                boundary.xy = FloorL(tPos.xy, lod) + dir_is_positive.xy*exp2(lod);
+                
+                continue;
+            } else {
+                normal.z = 1.0 - normal.x - normal.y;
+                if (normal.z > 0.5) {
+                    tangent_pos = tangent_pos + tangent_ray*(sampleHeight - tangent_pos.z)/tangent_ray.z - step_dir*exp2(-11);
+                } else {
+                    tangent_pos = tangent_pos + tangent_ray*dot(((boundary.xy-step_dir.xy) - tangent_pos.xy)/tangent_ray.xy, prevPlane) - step_dir*exp2(-11);
+                }
+                
+                break;
+            }
+        }
+        
+        int oldPos = int(dot(tPos.xy, plane.xy));
+        
+        tPos.xy = tangent_pos.xy + tangent_ray.xy*dot(dists,plane) + step_dir.xy*exp2(-11);
+        tPos.xy = mix(tPos.xy, boundary.xy + step_dir.xy*exp2(-11), plane);
+        
+        int newPos = int(dot(tPos.xy, plane.xy));
+        int shouldStepUp = int((newPos >> (lod+1)) != (oldPos >> (lod+1)));
+        lod = min(lod + shouldStepUp, 4);
+        
+        boundary.xy = FloorL(tPos.xy, lod) + dir_is_positive.xy*exp2(lod);
+        
+        prevPlane = plane;
+    }
+    
+    tangent_pos.xy -= sprite_size * 4 * (1.0 - dir_is_positive.xy);
+    
+    if (lod == 0) {
+        normal.z = 1.0 - normal.x - normal.y;
+        normal *= -sign(tangent_ray);
+        tangent_pos += normal * exp2(-10);
+        return corner + SpriteCoord(tangent_pos.xy - normal.xy * exp2(-9), sprite_size);
+    } else {
+        normal = vec3(0.0);
     }
     
     return ivec2(-10);
@@ -159,7 +279,6 @@ ivec2 Parallax1(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2
     uvPos.xy = floor(tangent_pos.xy);
     uvPos.z = tangent_pos.z;
     boundary.xy = floor(uvPos.xy/exp2(lod))*exp2(lod) + (dir_is_positive.xy)*exp2(lod);
-    // show(sprite_size.xy / 32.0);
     
     bool heading_out = tangent_ray.z > 0;
     
@@ -171,7 +290,7 @@ ivec2 Parallax1(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2
         ivec2 C = ivec2(uvPos.xy + sprite_size * 8) % sprite_size;
         
         boundary.z = GetTexelHeight(corner + C, lod, sprite_size.x);
-        // if (steps == 10) show(boundary.x / sprite_size);
+        
         vec3 dists = (boundary - tangent_pos) / tangent_ray;
         
         vec3 plane = MinComponent(dists);
@@ -198,8 +317,8 @@ ivec2 Parallax1(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2
             lod--;
         } else { // Miss
             // int oldPos = int(dot(uvPos.xy, plane.xy));
-            uvPos.xy = tangent_pos.xy + 1.0*tangent_ray.xy*dot(dists,plane) + step_dir.xy*plane.xy*exp2( -8);
-            uvPos.z =  tangent_pos.z  + 1.0*tangent_ray.z *dot(dists,plane) + step_dir.z          *exp2(-16);
+            uvPos.xy = tangent_pos.xy + tangent_ray.xy*dot(dists,plane) + step_dir.xy*plane.xy*exp2( -8);
+            uvPos.z =  tangent_pos.z  + tangent_ray.z *dot(dists,plane) + step_dir.z          *exp2(-16);
             // int newPos = int(dot(uvPos.xy, plane.xy));
             // int shouldStepUp = int((newPos >> (lod+1)) != (oldPos >> (lod+1)));
             // lod = min(lod + shouldStepUp, 4);
@@ -214,6 +333,87 @@ ivec2 Parallax1(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2
     
     return ivec2(0);
 }
+
+
+// linear search, loddable
+ivec2 Parallax3(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 corner, ivec2 sprite_size, int lodLimit) {
+    vec3 step_dir = sign(tangent_ray);
+    vec3 dir_is_positive = max(step_dir, vec3(0.0));
+    
+    if (tangent_pos.z > 1.0) {
+        if (tangent_ray.z > 0) return ivec2(-10);
+        tangent_pos = tangent_pos + tangent_ray * (1.0 - tangent_pos.z) / tangent_ray.z * 0.999999;
+    }
+    
+    int lod = 0;
+    int steps = 0;
+    
+    vec3 boundary;
+    vec3 initBound;
+    vec3 tPos = tangent_pos;
+    boundary.xy = FloorL(tPos.xy, lod) + dir_is_positive.xy*exp2(lod);
+    initBound.xy = FloorL(tPos.xy, lod) + dir_is_positive.xy*exp2(lod);
+    vec2 prevPlane = vec2(0.0);
+    vec2 prevBound = boundary.xy;
+    bool hit = false;
+    
+    while (++steps < 1024) {
+        float sampleHeight = GetTexelHeight(corner + SpriteCoord(tPos.xy, sprite_size), lod, sprite_size.x);
+        
+        vec2 dists = (boundary.xy - tangent_pos.xy) / tangent_ray.xy;
+        
+        vec2 plane = MinComponent2(dists.xy);
+        vec2 exi = tangent_pos.xy + tangent_ray.xy * (sampleHeight - tangent_pos.z) / tangent_ray.z;
+        
+        vec2 backAxis = plane;
+        vec2 boundAxis = boundary.xy;
+        if (tangent_ray.z > 0.0) {
+            backAxis = prevPlane;
+            boundAxis = prevBound;
+        }
+        
+        if (dot(backAxis, (exi.xy - boundAxis)*step_dir.xy*step_dir.z) > 0) {
+            normal = vec3(prevPlane, 0.0);
+            if (tangent_ray.z < 0.0 && (dot(prevPlane, (exi.xy - prevBound)*step_dir.xy*step_dir.z) < 0.0 || steps == 1)) {
+                normal = vec3(0.0, 0.0, 1.0);
+            }
+            
+            // if (lod > 0) {
+            //     lod++;
+            // } else {
+            //     hit = true;
+            //     break;
+            // }
+            
+            hit = true;
+            break;
+        }
+        
+        tPos.z = tangent_pos.z + tangent_ray.z * dot(dists.xy, plane);
+        
+        // Escaped out the top.
+        if (tPos.z > 1.0001) {
+            tangent_pos = tangent_pos + tangent_ray * (1.0 - tangent_pos.z) / tangent_ray.z;
+            break;
+        }
+        
+        prevBound = boundary.xy;
+        prevPlane = plane;
+        
+        tPos.xy += plane.xy * step_dir.xy * exp2(lod);
+        boundary.xy += plane.xy * step_dir.xy * exp2(lod);
+        // boundary.xy = FloorL(tPos.xy, lod) + dir_is_positive.xy*exp2(lod);
+    }
+    
+    if (hit) {
+        normal *= -sign(tangent_ray);
+        tangent_pos += normal * exp2(-10);
+        return corner + SpriteCoord(tangent_pos.xy - normal.xy * exp2(-9), sprite_size);
+    }
+    
+    return ivec2(-10);
+}
+
 #endif
 
 #endif

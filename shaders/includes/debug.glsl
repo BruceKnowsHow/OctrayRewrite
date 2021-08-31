@@ -28,6 +28,7 @@ void inc( vec4 x) { deb = true; Debug += x.rgb; }
 #endif
 #if defined csh
 	void exitCoord(ivec2 screenCoord) { if (deb) imageStore(colorimg5, screenCoord, vec4(Debug, 0.0)); Debug = vec3(0.0); }
+	void accumCoord(ivec2 screenCoord) { if (deb) imageStore(colorimg5, screenCoord, vec4(Debug + imageLoad(colorimg5, screenCoord).rgb, 0.0)); Debug = vec3(0.0); }
 #endif
 
 

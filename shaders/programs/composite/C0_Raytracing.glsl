@@ -16,6 +16,7 @@ uniform float frameTimeCounter;
 uniform float far;
 uniform int frameCounter;
 uniform bool accum;
+uniform int hideGUI;
 
 vec2 texcoord = gl_GlobalInvocationID.xy / viewSize;
 
@@ -96,14 +97,24 @@ void main() {
     vec3 voxelPos = WorldToVoxelSpace(worldPos);
     vec3 absorb = vec3(1.0);
     
+    // ivec2 cobble_corner = ivec2(18, 7) * 16;
     // ivec2 cobble_corner = ivec2(18+9, 0) * 16;
+    // ivec2 cobble_corner = ivec2(7, 1) * 512;
+    // ivec2 cobble_corner = ivec2(13, 8) * 512;
+    // // ivec2 cobble_corner = ivec2(21, 2) * 256;
     
-    // vec3 tangent_pos = vec3(mod(cameraPosition.xz, 16), mod(cameraPosition.y/2.0, 8.0) - 4.0);
+    // // vec3 tangent_pos = vec3(mod(cameraPosition.xz, 512), mod(cameraPosition.y/2.0, 8.0) - 4.0);
+    // vec3 tangent_pos = vec3(mod(cameraPosition.xz, 512), mod(cameraPosition.y/2.0, 512.0) - 256.0);
     // vec3 plane;
-    // ivec2 pCoord = Parallax(tangent_pos, worldDir.xzy, plane, cobble_corner, ivec2(16), 0);
+    // // ivec2 pCoord = Parallax(tangent_pos, worldDir.xzy, plane, cobble_corner, ivec2(16), 0);
+    // // pCoord = Parallax(tangent_pos, normalize(vec3(1,2,3)), plane, cobble_corner, ivec2(16), 0);
+    // ivec2 pCoord = Parallax(tangent_pos, worldDir.xzy, plane, cobble_corner, ivec2(512), 0);
     
     // vec3 diffuse2 = uintBitsToFloat(texelFetch(atlas_tex, pCoord, 0)).rgb;
-    // show(diffuse2);
+    // // vec3 diffuse2 = uintBitsToFloat(texelFetch(atlas_tex, ivec2(gl_GlobalInvocationID.xy) * 16, 0)).rgb;
+    // // show(diffuse2);
+    // if (hideGUI == 0)
+    //     show(diffuse2);
     // exitCoord(ivec2(gl_GlobalInvocationID.xy));
     // return;
     

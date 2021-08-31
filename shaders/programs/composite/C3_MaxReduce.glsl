@@ -25,14 +25,16 @@ void main() {
         for (int y = 0; y < 16*1024; y += 16*64) {
             float texel_height = texelFetch(depthtex2, coord+ivec2(x,y), 0).a;
             
-            imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 0), floatBitsToUint(texel_height));
+            // imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 0), floatBitsToUint(texel_height));
             imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 1), floatBitsToUint(texel_height));
             imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 2), floatBitsToUint(texel_height));
             imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 3), floatBitsToUint(texel_height));
             imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 4), floatBitsToUint(texel_height));
-            imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 5), floatBitsToUint(texel_height));
-            imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 6), floatBitsToUint(texel_height));
-            imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 7), floatBitsToUint(texel_height));
+            // imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 5), floatBitsToUint(texel_height));
+            // imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 6), floatBitsToUint(texel_height));
+            // imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 7), floatBitsToUint(texel_height));
+            // imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 8), floatBitsToUint(texel_height));
+            // imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 9), floatBitsToUint(texel_height));
         }
     }
     #endif
