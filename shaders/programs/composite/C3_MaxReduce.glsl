@@ -21,8 +21,8 @@ void main() {
     
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
     
-    for (int x = 0; x < 16*1024; x += 16*64) {
-        for (int y = 0; y < 16*1024; y += 16*64) {
+    for (int x = 0; x < 16*2048; x += 16*64) {
+        for (int y = 0; y < 16*2048; y += 16*64) {
             float texel_height = texelFetch(depthtex2, coord+ivec2(x,y), 0).a;
             
             // imageAtomicMax(colorimg2, get_POM_coord(coord + ivec2(x, y), 0), floatBitsToUint(texel_height));
