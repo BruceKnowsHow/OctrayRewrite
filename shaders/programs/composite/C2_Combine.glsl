@@ -120,9 +120,6 @@ void main() {
     
     albedo = pow(albedo, vec3(2.2));
     
-    diffuse = mix(diffuse, diffuse / max(albedo, vec3(0.004)), greaterThan(albedo, vec3(10.0 / 255.0)));
-
-    
     float diffuseLum = Luminance(diffuse);
     
     float linDepth = LinearizeDepth(depth);

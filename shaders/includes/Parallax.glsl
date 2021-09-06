@@ -77,6 +77,7 @@ const bool bool_parallax = true;
 const bool bool_parallax = false;
 #endif
 
+// #define POM_SILHOUETTE
 
 // bool sideHit = tangent_pos.z  + tangent_ray.z *dot(dists,plane)*exp2(-16) < boundary.z;
 #if (!defined composite3)
@@ -163,8 +164,15 @@ ivec2 LinearParallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, 
     return ivec2(-10);
 }
 
+// struct ParallaxOut {
+//     bool  hit;
+//     vec3  tangent_pos;
+//     vec3  plane;
+//     ivec2 texel_coord;
+//     bvec2 overflow;
+// };
 
-ivec2 Parallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 corner, ivec2 sprite_size, int lodLimit) {
+ivec2 Parallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 corner, ivec2 sprite_size, int lodLimit, bool edgeLimit) {
     if (!bool_quadtree_parallax)
         return LinearParallax(tangent_pos, tangent_ray, normal, corner, sprite_size, lodLimit);
     
@@ -172,10 +180,11 @@ ivec2 Parallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 
     vec3 step_dir = sign(tangent_ray);
     vec3 dir_is_positive = max(step_dir, vec3(0.0));
     
-    tangent_pos.xy = mix(tangent_pos.xy + sprite_size * 1, tangent_pos.xy, dir_is_positive.xy);
+    // if (!edgeLimit)
+        tangent_pos.xy = mix(tangent_pos.xy + sprite_size * 1, tangent_pos.xy, dir_is_positive.xy);
     
     if (tangent_pos.z > 1.0) {
-        if (tangent_ray.z > 0) return ivec2(-10);
+        if (tangent_ray.z > 0) { return ivec2(-10); }
         tangent_pos = tangent_pos + tangent_ray * (1.0 - tangent_pos.z) / tangent_ray.z * 0.999999;
     }
     
@@ -190,9 +199,12 @@ ivec2 Parallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 
     vec2 prevPlane = vec2(0.0);
     float sampleHeight = 1.0;
     
-    
     while (++steps < 256) {
         sampleHeight = GetTexelHeight(corner + SpriteCoord(tPos, sprite_size), lod, sprite_size.x);
+        
+        // if ((edgeLimit) && (tPos.x < 0.0 || tPos.y < 0.0 || tPos.x >= sprite_size.x || tPos.y >= sprite_size.y)) {
+        //     sampleHeight = 1.0;
+        // }
         
         boundary = FloorL(tPos, lod) + dir_is_positive.xy*exp2(lod);
         vec2 dists = (boundary - tangent_pos.xy) * tDelta.zw;
@@ -261,7 +273,8 @@ ivec2 Parallax(inout vec3 tangent_pos, vec3 tangent_ray, out vec3 normal, ivec2 
         lod = 0;
     }
     
-    tangent_pos.xy = mix(tangent_pos.xy - sprite_size * 1, tangent_pos.xy, dir_is_positive.xy);
+    // if (!edgeLimit)
+        tangent_pos.xy = mix(tangent_pos.xy - sprite_size * 1, tangent_pos.xy, dir_is_positive.xy);
     
     if (lod == 0) {
         normal.z = 1.0 - normal.x - normal.y;

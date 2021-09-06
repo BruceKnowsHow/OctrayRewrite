@@ -456,7 +456,9 @@ void main()  {
             
             continue;
         } else if (IsParallaxRay(curr)) {
-            vec3 pl = DecodePlane(curr.info >> 24);
+            vec3 pl = DecodePlane((curr.info >> 24) % 8);
+            bool edgeLimit = false;
+            // bool edgeLimit = (curr.info >> 24) >= 8;
             
             uint chunk_addr = texelFetch(colortex3, old_get_sparse_chunk_coord(ivec3(curr.voxelPos)) + SPARSE0, 0).r;
             ivec2 voxel_coord = get_sparse_voxel_coord(chunk_addr, ivec3(curr.voxelPos), 0);
@@ -470,7 +472,7 @@ void main()  {
             vec3 tanPos = curr.extra.xyz;
             
             vec3 plane;
-            ivec2 texel_coord = Parallax(tanPos, tanRay, plane, ivec2(cornerTexcoord*atlasSize), ivec2(spriteSize), 0);
+            ivec2 texel_coord = Parallax(tanPos, tanRay, plane, ivec2(cornerTexcoord*atlasSize), ivec2(spriteSize), 0, edgeLimit);
             
             bool hit = texel_coord.x != -10;
             

@@ -46,6 +46,8 @@ option.PARALLAX=POM
 option.POM_DEPTH_MULT=POM Height
 option.PARALLAX.comment=Parallax Occlusion Mapping.
 screen.POM.comment=Parallax Occlusion Mapping.
+option.POM_SILHOUETTE=POM Silhouette
+option.QUADTREE_POM=Quadtree POM
 
 option.RASTER_ENGINE=Raster Engine
 option.DEBUG=Debug Viewer

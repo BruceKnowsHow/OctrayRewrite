@@ -3,6 +3,7 @@ const vec2 workGroupsRender = vec2(1.0, 1.0);
 
 uniform sampler2D depthtex0;
 uniform sampler2D colortex6;
+uniform sampler2D colortex3;
 uniform sampler2D colortex7;
 uniform sampler2D colortex12;
 
@@ -127,7 +128,8 @@ void main() {
         
         vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_GlobalInvocationID.xy), 0).rgb;
         
-        vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)) * 256.0 / 255.0;
+        vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r));
+        diffuse.rgb = diffuse.rgb * 256.0 / 255.0;
         vec3 surfaceNormal = DecodeNormal(gbufferEncode.g);
         vec4 tex_s = unpackUnorm4x8(floatBitsToUint(gbufferEncode.b)) * 256.0 / 255.0;
         
@@ -162,6 +164,8 @@ void main() {
             curr.extra.xyz = tanPos;
         }
         #endif
+        
+        curr.absorb     = vec3(1.0);
         
         RayStruct specRay = curr;
         RayStruct  ambRay = curr;
