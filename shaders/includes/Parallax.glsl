@@ -40,8 +40,10 @@ ivec2 SpriteCoord(vec2 tPos, ivec2 sprite_size) {
     return (ivec2(tPos) + sprite_size * 8) % sprite_size;
 }
 
+#define MAX_TEXTURE_RESOLUTION 256 // [256 512]
+
+#if (MAX_TEXTURE_RESOLUTION >= 512)
 // #define QUADTREE_POM
-#ifdef QUADTREE_POM
 #endif
 
 #ifdef QUADTREE_POM

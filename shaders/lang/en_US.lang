@@ -47,7 +47,10 @@ option.POM_DEPTH_MULT=POM Height
 option.PARALLAX.comment=Parallax Occlusion Mapping.
 screen.POM.comment=Parallax Occlusion Mapping.
 option.POM_SILHOUETTE=POM Silhouette
-option.QUADTREE_POM=Quadtree POM
+option.MAX_TEXTURE_RESOLUTION=Max Texture Size
+option.MAX_TEXTURE_RESOLUTION.comment=Uses an accelerated POM algorithm for larger texture resolutions.
+value.MAX_TEXTURE_RESOLUTION.256=256x
+value.MAX_TEXTURE_RESOLUTION.512=Unlimited
 
 option.RASTER_ENGINE=Raster Engine
 option.DEBUG=Debug Viewer
