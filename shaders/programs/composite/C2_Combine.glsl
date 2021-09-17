@@ -202,10 +202,7 @@ void main() {
             
             vec3 gbufferEncodeP = texelFetch(colortex6, p, 0).rgb;
             
-            vec3 albedoP = unpackUnorm4x8(floatBitsToUint(gbufferEncodeP.r)).rgb * 256.0 / 255.0;
-            albedoP = pow(albedoP, vec3(2.2));
-            
-            vec3 diffuseP = ReadColor(p) / max(albedoP, vec3(0.001));
+            vec3 diffuseP = ReadColor(p);
             
             float diffuseLumP = Luminance(diffuseP);
             vec3 normalP = DecodeNormal(gbufferEncodeP.g);
