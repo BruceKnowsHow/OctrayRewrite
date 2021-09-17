@@ -15,6 +15,18 @@ vec2 MinComponent2(vec2 a) {
     return vec2(0,1);
 }
 
+float EncodeTangentPos(vec2 tanPos, vec2 spriteSize) {
+    tanPos = clamp((tanPos / spriteSize + 0.5) / 2.0, 0.0, 1.0);
+    uvec2 iv = uvec2(tanPos * exp2(16)) << uvec2(0, 16);
+    return uintBitsToFloat(iv.y | iv.x);
+}
+
+vec2 DecodeTangentPos(float fenc, vec2 spriteSize) {
+    uint enc = floatBitsToUint(fenc);
+    uvec2 iv = uvec2(enc % (1 << 16), enc >> 16);
+    return ((vec2(iv) * exp2(-16)) * 2.0 - 0.5) * spriteSize;
+}
+
 ivec2 get_POM_LOD_offset(int LOD) {
     ivec2 ret = ivec2(0);
     

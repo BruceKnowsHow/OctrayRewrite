@@ -297,7 +297,7 @@ void main() {
     gl_FragData[1].rgb = _voxelPos + _tanMat[2] * exp2(-11);
     
     #ifdef PARALLAX
-    gl_FragData[2] = vec4(tangent_pos, uintBitsToFloat(EncodePlane(_tanMat[2]) + 8*uint(tex_n.a < 1.0)));
+    gl_FragData[2] = vec4(EncodeTangentPos(tangent_pos.xy, _spriteSize), uintBitsToFloat(packUnorm2x16(_cornerTexcoord)), tangent_pos.z, uintBitsToFloat(EncodePlane(_tanMat[2]) + 8*uint(tex_n.a < 1.0)));
     #endif
     
     exit();

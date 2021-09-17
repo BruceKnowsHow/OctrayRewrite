@@ -155,13 +155,12 @@ void main() {
             tanMat = RecoverTangentMat(plane);
             
             surfaceNormal = normalize(surfaceNormal*tanMat);
-            vec3 tanPos = parallax_data.rgb;
             curr.voxelPos = curr.voxelPos - plane * exp2(-9);
             curr.info |= pData << 24;
             curr.info |= PARALLAX_RAY_TYPE;
             
             curr.worldDir = normalize(curr.worldDir * tanMat);
-            curr.extra.xyz = tanPos;
+            curr.extra.xyz = parallax_data.rgb;
         }
         #endif
         

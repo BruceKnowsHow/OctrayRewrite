@@ -464,12 +464,12 @@ void main()  {
             ivec2 voxel_coord = get_sparse_voxel_coord(chunk_addr, ivec3(curr.voxelPos), 0);
             uint packedVoxelData = texelFetch(voxel_data_tex, voxel_coord + DATA0, 0).r;
             vec2 spriteSize = exp2(vec2(decode_sprite_size(packedVoxelData)));
-            vec2 cornerTexcoord = floor(unpackUnorm2x16(texelFetch(voxel_data_tex, voxel_coord, 0).r) * atlasSize) / atlasSize;
+            vec2 cornerTexcoord = floor(unpackUnorm2x16(floatBitsToUint(curr.extra.y)) * atlasSize) / atlasSize;
             
             mat3 tanMat = RecoverTangentMat(pl);
             
             vec3 tanRay = curr.worldDir;
-            vec3 tanPos = curr.extra.xyz;
+            vec3 tanPos = vec3(DecodeTangentPos(curr.extra.x, spriteSize), curr.extra.z);
             
             vec3 plane;
             ivec2 texel_coord = Parallax(tanPos, tanRay, plane, ivec2(cornerTexcoord*atlasSize), ivec2(spriteSize), 0, edgeLimit);
@@ -492,7 +492,7 @@ void main()  {
             diffuse.rgb = pow(diffuse.rgb, vec3(2.2));
             
             curr.absorb *= diffuse.rgb;
-            curr.extra.xyz = tanPos;
+            curr.extra.xz = vec2(EncodeTangentPos(tanPos.xy, spriteSize), tanPos.z);
             
             vec4 tex_n = uintBitsToFloat(texelFetch(atlas_tex_n, texel_coord, 0));
             vec4 tex_s = uintBitsToFloat(texelFetch(atlas_tex_s, texel_coord, 0));
