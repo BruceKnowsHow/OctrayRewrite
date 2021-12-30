@@ -18,6 +18,7 @@ uniform bool accum;
 
 uniform usampler2D voxel_data_tex;
 uniform usampler2D colortex3;
+uniform sampler3D colortex14;
 uniform usampler2D atlas_tex;
 uniform usampler2D atlas_tex_n;
 uniform usampler2D atlas_tex_s;

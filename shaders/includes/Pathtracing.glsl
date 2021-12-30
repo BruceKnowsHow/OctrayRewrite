@@ -2,6 +2,8 @@
 #define SUNLIGHT_RAYS
 // #define SPECULAR_RAYS
 
+#define BLUE_NOISE_AMBIENT
+
 void DoPBR(vec4 diffuse, vec3 surfaceNormal, vec3 flatNormal, vec4 tex_s, vec3 worldDir,
                   inout RayStruct specRay, inout RayStruct ambRay, inout RayStruct sunRay, mat3 tanMat)
 {
@@ -40,8 +42,18 @@ void DoPBR(vec4 diffuse, vec3 surfaceNormal, vec3 flatNormal, vec4 tex_s, vec3 w
     specRay.absorb *= Li * 1;
     specRay.absorb *= float(dot(specRay.worldDir, flatNormal) > 0.0);
     
+#ifdef BLUE_NOISE_AMBIENT
+    ivec3 ns = ivec3(128, 128, 32);
     
-    ambRay.worldDir = ArbitraryTBN(surfaceNormal) * CalculateConeVector(RandNextF(), radians(90.0), 32);
+    vec3 dir;
+    dir.xy = texelFetch(colortex14, ivec3(ivec2(ambRay.screenCoord) + uvec2(Rand2(frameCounter/ns.z) % ns.xy) + uvec2(Rand2(GetRayDepth(ambRay)*12345) % ns.xy), frameCounter) % ns, 0).xy*2-1;
+    dir.z = sqrt(1.0 - dot(dir.xy, dir.xy));
+    dir = normalize(dir);
+#else
+    vec3 dir = CalculateConeVector(RandNextF(), radians(90.0), 32);
+#endif
+    
+    ambRay.worldDir = ArbitraryTBN(surfaceNormal) * dir;
     ambRay.absorb *= float(!isMetal);
     ambRay.absorb *= float(dot(ambRay.worldDir, flatNormal) > 0.0);
     

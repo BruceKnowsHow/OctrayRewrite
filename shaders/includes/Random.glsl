@@ -43,6 +43,9 @@ vec3 RandNext3F() { return vec3(RandNext3()) / float(0xffffffffu); }
 vec4 RandNext4F() { return vec4(RandNext4()) / float(0xffffffffu); }
 #endif
 
+uint  Rand  (uint  seed) { return Triple32(seed); }
+uvec2 Rand2 (uint  seed) { return uvec2(Triple32(seed), Triple32(Triple32(seed))); }
+uvec2 Rand2 (uvec2 seed) { return uvec2(Triple32(seed.x), Triple32(seed.y)); }
 float RandF (uint  seed) { return float(Triple32(seed))                    / float(0xffffffffu); }
 vec2  Rand2F(uvec2 seed) { return vec2(Triple32(seed.x), Triple32(seed.y)) / float(0xffffffffu); }
 
