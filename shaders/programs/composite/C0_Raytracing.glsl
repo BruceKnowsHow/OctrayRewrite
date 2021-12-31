@@ -6,7 +6,7 @@ uniform sampler2D colortex6;
 uniform sampler2D colortex3;
 uniform sampler2D colortex7;
 uniform sampler2D colortex12;
-uniform sampler3D colortex14;
+uniform sampler2D colortex14;
 
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferProjectionInverse;
