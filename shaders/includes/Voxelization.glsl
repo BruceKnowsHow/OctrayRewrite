@@ -81,30 +81,38 @@ const int sparse_voxel_buffer_width = 16384;
 const int sparse_voxel_buffer_height = VOXEL_BUFFER_HEIGHT;
 const int sparse_voxel_buffer_size = sparse_voxel_buffer_width * sparse_voxel_buffer_height;
 
+#if MC_VERSION >= 11800
+    #define WORLD_HEIGHT 384
+    #define Y_SHIFT 64
+#else
+    #define WORLD_HEIGHT 256
+    #define Y_SHIFT 0
+#endif
+
 const int   const_voxel_radius     = 1024;
 const int   const_voxel_diameter   = 2 * const_voxel_radius;
-const ivec3 const_voxel_dimensions = ivec3(const_voxel_diameter, (MC_VERSION >= 11800 ? 384 : 256), const_voxel_diameter);
+const ivec3 const_voxel_dimensions = ivec3(const_voxel_diameter, WORLD_HEIGHT, const_voxel_diameter);
 
 const int const_voxel_area   = const_voxel_dimensions.x * const_voxel_dimensions.z;
 const int const_voxel_volume = const_voxel_dimensions.y * const_voxel_area;
 
 int   voxel_radius     = int(min(const_voxel_radius, far + 16));
 int   voxel_diameter   = 2 * voxel_radius;
-ivec3 voxel_dimensions = ivec3(voxel_diameter, (MC_VERSION >= 11800 ? 384 : 256), voxel_diameter);
+ivec3 voxel_dimensions = ivec3(voxel_diameter, WORLD_HEIGHT, voxel_diameter);
 
 int voxel_area   = voxel_dimensions.x * voxel_dimensions.z;
 int voxel_volume = voxel_dimensions.y * voxel_area;
 
 vec3 WorldToVoxelSpace(vec3 position) {
     vec3 WtoV = vec3(0.0);
-    WtoV.y += cameraPosition.y + (MC_VERSION >= 11800 ? 64.0 : 0.0);
+    WtoV.y += cameraPosition.y + Y_SHIFT;
     WtoV.xz += voxel_radius + (cameraPosition.xz - floor(cameraPosition.xz/16.0)*16.0);
     return position + WtoV;
 }
 
 vec3 VoxelToWorldSpace(vec3 position) {
     vec3 WtoV = vec3(0.0);
-    WtoV.y += cameraPosition.y + (MC_VERSION >= 11800 ? 64.0 : 0.0);
+    WtoV.y += cameraPosition.y + Y_SHIFT;
     WtoV.xz += voxel_radius + (cameraPosition.xz - floor(cameraPosition.xz/16.0)*16.0);
     return position - WtoV;
 }

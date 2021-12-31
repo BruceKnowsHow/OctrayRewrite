@@ -8,19 +8,6 @@ struct BufferedRay {
     vec4 _3;
 };
 
-float PackCoord(ivec2 coord) {
-    coord.y = coord.y >> 16;
-    return intBitsToFloat(coord.x + coord.y);
-}
-
-ivec2 UnpackCoord(float enc) {
-    ivec2 coord;
-    coord.x = floatBitsToInt(enc) & ((1 << 16) - 1);
-    coord.y = floatBitsToInt(enc) >> 16;
-    
-    return coord;
-}
-
 struct RayStruct {
     vec3 voxelPos;
     vec3 worldDir;
