@@ -9,13 +9,14 @@ value.RAYBUFFER_MULT.4=4x
 
 option.VOXEL_BUFFER_HEIGHT=Max Loaded Chunks
 option.VOXEL_BUFFER_HEIGHT.comment=The approximate maximum number of chunks that can be loaded. Lower number might be faster (especially on AMD). Raise this if the screen starts shining purple. Higher render distances require more loaded chunks. Enabling "Frustum Culling" requires less loaded chunks.
-value.VOXEL_BUFFER_HEIGHT.1024=1x
-value.VOXEL_BUFFER_HEIGHT.2048=2x
-value.VOXEL_BUFFER_HEIGHT.4096=4x
-value.VOXEL_BUFFER_HEIGHT.6144=6x
-value.VOXEL_BUFFER_HEIGHT.8192=8x
-value.VOXEL_BUFFER_HEIGHT.12288=12x
-value.VOXEL_BUFFER_HEIGHT.16384=16x
+value.VOXEL_BUFFER_HEIGHT.512=1x
+value.VOXEL_BUFFER_HEIGHT.1024=2x
+value.VOXEL_BUFFER_HEIGHT.2048=4x
+value.VOXEL_BUFFER_HEIGHT.4096=8x
+value.VOXEL_BUFFER_HEIGHT.6144=12x
+value.VOXEL_BUFFER_HEIGHT.8192=16x
+value.VOXEL_BUFFER_HEIGHT.12288=24x
+value.VOXEL_BUFFER_HEIGHT.16384=32x
 
 screen.Pathtracing=Path Tracing
 option.MAX_LIGHT_BOUNCES=Light Bounces

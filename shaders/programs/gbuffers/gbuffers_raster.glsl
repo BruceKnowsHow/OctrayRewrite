@@ -77,7 +77,7 @@ void main() {
     cornerTexcoord = mc_midTexCoord.xy - abs(mc_midTexCoord.xy - texcoord);
     vec2 texDirection = sign(texcoord - mc_midTexCoord)*vec2(1,sign(at_tangent.w));
     worldPos    = (gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex).xyz;
-    vec3 triCentroid = worldPos.xyz - (tanMat * vec3(texDirection,0.5)) - tanMat[2] / 32.0;
+    vec3 triCentroid = worldPos.xyz - (tanMat * vec3(texDirection,0.0)) - tanMat[2] / 32.0;
     triCentroid = mix(worldPos, triCentroid, 0.5);
     voxelPos    = WorldToVoxelSpace(mix(worldPos, triCentroid, exp2(-11))) + tanMat[2] * exp2(-11);
     // worldPos = mix(worldPos, triCentroid, -0.2);
@@ -91,7 +91,7 @@ void main() {
     
     if (((blockID == 3
       || blockID == 4
-      || (blockID >=  6 && blockID <= 12)) && abs(tanMat[2].y) < 0.9)
+      || (blockID >=  6 && blockID <= 12)) && abs(tanMat[2].y) < 0.9) // Snow layers
       || ((blockID >= 14 && blockID <= 21) && abs(tanMat[2].y) < 0.9)
     )
         return;

@@ -18,6 +18,14 @@ const float sunPathRotation = -40; // [-60 -55 -50 -45 -40 -35 -30 -25 -20 -15 -
 #define atlas_tex_n depthtex2
 #define atlas_tex_s shadowtex1
 
+const int chunk_map_width = 512;
+
+#if MC_VERSION >= 11800
+const int chunk_map_height = 768;
+#else
+const int chunk_map_height = 512;
+#endif
+
 #define SPARSE0 ivec2(512, 0)
 #define DATA0 ivec2(1, 0)
 
@@ -67,38 +75,36 @@ bool IsConvexAABB(uint enc) {
     return is_AABB(enc);
 }
 
-const int sparse_chunk_map_size = 512;
+#define VOXEL_BUFFER_HEIGHT 2048 // [1024 2048 4096 6144 8192 12288 16384]
 
-#define VOXEL_BUFFER_HEIGHT 4096 // [1024 2048 4096 6144 8192 12288 16384]
-
-const int sparse_voxel_buffer_width = 8192;
+const int sparse_voxel_buffer_width = 16384;
 const int sparse_voxel_buffer_height = VOXEL_BUFFER_HEIGHT;
 const int sparse_voxel_buffer_size = sparse_voxel_buffer_width * sparse_voxel_buffer_height;
 
 const int   const_voxel_radius     = 1024;
 const int   const_voxel_diameter   = 2 * const_voxel_radius;
-const ivec3 const_voxel_dimensions = ivec3(const_voxel_diameter, 256, const_voxel_diameter);
+const ivec3 const_voxel_dimensions = ivec3(const_voxel_diameter, (MC_VERSION >= 11800 ? 384 : 256), const_voxel_diameter);
 
 const int const_voxel_area   = const_voxel_dimensions.x * const_voxel_dimensions.z;
 const int const_voxel_volume = const_voxel_dimensions.y * const_voxel_area;
 
 int   voxel_radius     = int(min(const_voxel_radius, far + 16));
 int   voxel_diameter   = 2 * voxel_radius;
-ivec3 voxel_dimensions = ivec3(voxel_diameter, 256, voxel_diameter);
+ivec3 voxel_dimensions = ivec3(voxel_diameter, (MC_VERSION >= 11800 ? 384 : 256), voxel_diameter);
 
 int voxel_area   = voxel_dimensions.x * voxel_dimensions.z;
 int voxel_volume = voxel_dimensions.y * voxel_area;
 
 vec3 WorldToVoxelSpace(vec3 position) {
     vec3 WtoV = vec3(0.0);
-    WtoV.y += cameraPosition.y;
+    WtoV.y += cameraPosition.y + (MC_VERSION >= 11800 ? 64.0 : 0.0);
     WtoV.xz += voxel_radius + (cameraPosition.xz - floor(cameraPosition.xz/16.0)*16.0);
     return position + WtoV;
 }
 
 vec3 VoxelToWorldSpace(vec3 position) {
     vec3 WtoV = vec3(0.0);
-    WtoV.y += cameraPosition.y;
+    WtoV.y += cameraPosition.y + (MC_VERSION >= 11800 ? 64.0 : 0.0);
     WtoV.xz += voxel_radius + (cameraPosition.xz - floor(cameraPosition.xz/16.0)*16.0);
     return position - WtoV;
 }
@@ -129,7 +135,7 @@ int get_voxel_addr(ivec3 voxelPos, int lod) {
 ivec2 old_get_sparse_chunk_coord(ivec3 voxelPos) {
     int sparse_chunk_addr = get_voxel_offset(voxelPos, 4);
     
-    return ivec2(sparse_chunk_addr % sparse_chunk_map_size, sparse_chunk_addr / sparse_chunk_map_size);
+    return ivec2(sparse_chunk_addr % chunk_map_width, sparse_chunk_addr / chunk_map_width);
 }
 
 int get_sub_chunk_lod_base_addr(int lod) {

@@ -1084,7 +1084,7 @@ void main() {
         imageStore(colorimg2, ivec2(4095), uvec4(1));
     
     { // Print error messages
-        uint chunks_loaded = imageLoad(colorimg3, ivec2(5, 513)).r; // Total count of chunks loaded
+        uint chunks_loaded = imageLoad(colorimg3, ivec2(5, chunk_map_height+1)).r; // Total count of chunks loaded
         uint chunk_space = (chunk_mem_size * 2) * chunks_loaded; // Amount of uints consumed per chunk
         uint screen_space = uint(viewSize.x) * uint(viewSize.y) * 2; // Amount of uints consumed for screen accumulation
         bool chunk_overflow = chunk_space + screen_space > sparse_voxel_buffer_size;
