@@ -47,17 +47,18 @@ void DoPBR(vec4 diffuse, vec3 surfaceNormal, vec3 flatNormal, vec4 tex_s, vec3 w
     
     vec3 dir;
     #if defined composite0
-        dir.xy =                (texelFetch(colortex14, ivec2(ivec2(ambRay.screenCoord) + uvec2(Rand2(frameCounter/ns.z) % ns.xy) + uvec2(Rand2(GetRayDepth(ambRay)*12345) % ns.xy)) % ns.xy + ivec2((frameCounter%ns.z)*ns.x, 0), 0).xy)*2-1;
+        dir.xy =                (texelFetch(colortex14, ivec2(ivec2(ambRay.screenCoord) + uvec2(Rand1x2(frameCounter/ns.z) % ns.xy) + uvec2(Rand1x2(GetRayDepth(ambRay)*12345) % ns.xy)) % ns.xy + ivec2((frameCounter%ns.z)*ns.x, 0), 0).xy)*2-1;
     #else
-        dir.xy = uintBitsToFloat(texelFetch(colortex14, ivec2(ivec2(ambRay.screenCoord) + uvec2(Rand2(frameCounter/ns.z) % ns.xy) + uvec2(Rand2(GetRayDepth(ambRay)*12345) % ns.xy)) % ns.xy + ivec2((frameCounter%ns.z)*ns.x, 0), 0).xy)*2-1;
+        dir.xy = uintBitsToFloat(texelFetch(colortex14, ivec2(ivec2(ambRay.screenCoord) + uvec2(Rand1x2(frameCounter/ns.z) % ns.xy) + uvec2(Rand1x2(GetRayDepth(ambRay)*12345) % ns.xy)) % ns.xy + ivec2((frameCounter%ns.z)*ns.x, 0), 0).xy)*2-1;
     #endif
     dir.z = sqrt(1.0 - dot(dir.xy, dir.xy));
     dir = normalize(dir);
-#else
-    vec3 dir = CalculateConeVector(RandNextF(), radians(90.0), 32);
-#endif
     
     ambRay.worldDir = ArbitraryTBN(surfaceNormal) * dir;
+#else
+    ambRay.worldDir = ArbitraryTBN(surfaceNormal) * CalculateConeVector(RandNextF(), radians(90.0), 32);
+#endif
+    
     ambRay.absorb *= float(!isMetal);
     ambRay.absorb *= float(dot(ambRay.worldDir, flatNormal) > 0.0);
     

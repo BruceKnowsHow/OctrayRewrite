@@ -55,14 +55,13 @@ uniform usampler2D colortex3;
 
 #if MC_VERSION >= 11800
 layout (local_size_x = 768) in;
-shared uint row_data2[768];
 #else
 layout (local_size_x = 512) in;
-shared uint row_data2[512];
 #endif
 
 const ivec3 workGroups = ivec3(1, 1, 1);
 
+shared uint row_data2[chunk_map_width];
 
 void main() {
     row_data2[int(gl_GlobalInvocationID.x)] = texelFetch(colortex3, ivec2(chunk_map_width-1, gl_GlobalInvocationID.x), 0).x;
