@@ -61,7 +61,7 @@ layout (local_size_x = 512) in;
 
 const ivec3 workGroups = ivec3(1, 1, 1);
 
-shared uint row_data2[chunk_map_width];
+shared uint row_data2[chunk_map_height];
 
 void main() {
     row_data2[int(gl_GlobalInvocationID.x)] = texelFetch(colortex3, ivec2(chunk_map_width-1, gl_GlobalInvocationID.x), 0).x;
