@@ -39,6 +39,7 @@ void DoPBR(vec4 diffuse, vec3 surfaceNormal, vec3 flatNormal, vec4 tex_s, vec3 w
     
     vec3 Li = (kD * diffuse.rgb*0 * 4.0 + spec) * NdotL;
     
+    // specRay.absorb *= min(Li,vec3(1)) * 1;
     specRay.absorb *= Li * 1;
     specRay.absorb *= float(dot(specRay.worldDir, flatNormal) > 0.0);
     

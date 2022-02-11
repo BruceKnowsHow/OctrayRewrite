@@ -21,4 +21,14 @@ bool is_backface_type(int ID) { return ID == 3 || ID == 4; }
 bool is_sapling(int ID)       { return ID == 5; }
 bool is_tallgrass(int ID)     { return ID == 7; }
 bool is_sub_voxel(int ID)     { return ID >= 3 && ID <= 20; }
-bool is_voxelized(int ID)     { return is_sub_voxel(ID) || (!is_entity(ID)) && (ID != 1) && (ID < 5 || ID == 8 || ID == 66 || ID >= 85 || ID == 75) && (ID != 250) || is_glass_type(ID); }
+bool is_iron_block(int ID)     { return ID == 22; }
+
+bool is_voxelized(int ID) { return
+	is_sub_voxel(ID) ||
+	is_iron_block(ID) ||
+	(!is_entity(ID))
+	&& (ID != 1)
+	&& (ID < 5 || ID == 8 || ID == 66 || ID >= 85 || ID == 75)
+	&& (ID != 250)
+	|| is_glass_type(ID);
+}

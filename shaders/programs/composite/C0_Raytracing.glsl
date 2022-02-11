@@ -42,6 +42,8 @@ layout (r32ui) uniform uimage2D colorimg3;
 vec3 GetWorldSpacePosition(vec2 coord, float depth) {
     vec4 pos = vec4(vec3(coord, depth) * 2.0 - 1.0, 1.0);
     pos = gbufferProjectionInverse * pos;
+    pos = vec4(vec3(coord - (TAAHash() * pos.w)*0, depth) * 2.0 - 1.0, 1.0);
+    pos = gbufferProjectionInverse * pos;
     pos /= pos.w;
     pos.xyz = (gbufferModelViewInverse * pos).xyz;
     
@@ -127,7 +129,7 @@ void main() {
             return;
         }
         
-        vec3 gbufferEncode = texelFetch(colortex6, ivec2(gl_GlobalInvocationID.xy), 0).rgb;
+        vec4 gbufferEncode = texelFetch(colortex6, ivec2(gl_GlobalInvocationID.xy), 0).rgba;
         
         vec4 diffuse = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r));
         diffuse.rgb = diffuse.rgb * 256.0 / 255.0;
@@ -176,6 +178,19 @@ void main() {
         sunRay.info  |= SUNLIGHT_RAY_TYPE;
         
         DoPBR(diffuse, surfaceNormal, surfaceNormal, tex_s, curr.worldDir, specRay, ambRay, sunRay, tanMat);
+        
+        if (is_water(int(gbufferEncode.a))) {
+            specRay.absorb = vec3(5.0);
+            specRay.absorb *= 1-dot(specRay.worldDir, surfaceNormal);
+            specRay.info = 0 | SPECULAR_RAY_TYPE;
+            
+            ambRay.absorb *= 0.0;
+            sunRay.absorb *= 0.0;
+        }
+        
+        if (is_iron_block(int(gbufferEncode.a))) {
+            specRay.absorb *= 1/vec3(pow(0.65 / 5.0, 1.0/1.0));
+        }
         
         uint i;
         WriteRay(i, specRay);

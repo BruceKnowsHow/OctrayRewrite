@@ -13,6 +13,7 @@ uniform bool accum;
 vec2 texcoord = gl_FragCoord.xy / viewSize;
 
 #include "../../includes/debug.glsl"
+#include "../../BlockMappings.glsl"
 
 
 uniform vec3 sunDirection;
@@ -47,7 +48,6 @@ void main() {
     
     if (depth >= 1.0) {
         gl_FragData[0] = vec4(skyColor, 0.0);
-        gl_FragData[1] = vec4(0.0);
         exit();
         return;
     }
@@ -55,6 +55,13 @@ void main() {
     vec4 gbufferEncode = texelFetch(colortex6, ivec2(gl_FragCoord.xy), 0);
     vec3 albedo = unpackUnorm4x8(floatBitsToUint(gbufferEncode.r)).rgb * 256.0 / 255.0;
     albedo = pow(albedo, vec3(2.2));
+    
+    int blockID = int(gbufferEncode.w);
+    if (is_water(blockID)) {
+        gl_FragData[0] = vec4(texelFetch(colortex11, coord, 0).rgb * albedo, 0.0);
+        exit();
+        return;
+    }
     
     gl_FragData[0].rgb = texelFetch(colortex11, coord, 0).rgb * albedo;
     
